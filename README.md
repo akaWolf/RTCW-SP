@@ -60,13 +60,13 @@ You have need to populate such tree:
 │   ├── sp_pak3.pk3
 │   ├── sp_pak4.pk3
 │   └── ui-rtcw.so
-└── wolf.exe
+└── wolf
 ```
 
 As you can see, you need to copy binaries:
 ```shell
 $ cd ~/RTCW/build
-$ cp wolf.exe ../game/
+$ cp wolf ../game/
 $ cp *.so ../game/main/
 ```
 
@@ -80,10 +80,10 @@ $ cp {Main/pak0.pk3,Main/sp_pak?.pk3} ~/RTCW/game/main
 
 ```shell
 $ cd ~/RTCW/game
-$ ./wolf.exe
+$ ./wolf
 ```
 
-You can specify needed parameters at command line like so: `./wolf.exe +set r_mode -1 +set r_customheight 1440 +set r_customwidth 2560 +set r_fullscreen 1`.
+You can specify needed parameters at command line like so: `./wolf +set r_mode -1 +set r_customheight 1440 +set r_customwidth 2560 +set r_fullscreen 1`.
 
 ## License
 
