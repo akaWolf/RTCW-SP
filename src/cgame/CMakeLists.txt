@@ -35,3 +35,4 @@ add_library(cgame SHARED
 )
 target_link_libraries(cgame m)
 set_target_properties(cgame PROPERTIES PREFIX "" OUTPUT_NAME "cgame-rtcw")
+install(TARGETS cgame DESTINATION main)

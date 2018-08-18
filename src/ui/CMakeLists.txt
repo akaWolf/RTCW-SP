@@ -12,3 +12,4 @@ add_library(ui SHARED
 )
 target_link_libraries(ui m)
 set_target_properties(ui PROPERTIES PREFIX "" OUTPUT_NAME "ui-rtcw")
+install(TARGETS ui DESTINATION main)

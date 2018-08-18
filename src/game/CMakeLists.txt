@@ -55,3 +55,4 @@ add_library(game SHARED
 )
 target_link_libraries(game m)
 set_target_properties(game PROPERTIES PREFIX "" OUTPUT_NAME "qagame-rtcw")
+install(TARGETS game DESTINATION main)
