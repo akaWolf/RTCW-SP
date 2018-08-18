@@ -85,6 +85,14 @@ $ ./wolf
 
 You can specify needed parameters at command line like so: `./wolf +set r_mode -1 +set r_customheight 1440 +set r_customwidth 2560 +set r_fullscreen 1`.
 
+## Some variables
+
+`r_mode` can be:
+
+* `-2` (desktop resolution)
+* `-1` (resolution is `r_customwidth` x `r_customheight`)
+* `0` .. `12` (see [tr_init.c](src/renderer/tr_init.c#L383))
+
 ## License
 
 This project is licensed under the GPL License - see the [COPYING.txt](COPYING.txt) file for details
