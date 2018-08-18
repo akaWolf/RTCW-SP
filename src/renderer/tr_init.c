@@ -847,46 +847,46 @@ void GfxInfo_f( void ) {
 	char *stringpos;
 	char stringout[128];
 
-	ri.Printf( PRINT_ALL, "\nGL_VENDOR: %s\n", glConfig.vendor_string );
-	ri.Printf( PRINT_ALL, "GL_RENDERER: %s\n", glConfig.renderer_string );
-	ri.Printf( PRINT_ALL, "GL_VERSION: %s\n", glConfig.version_string );
+	ri.Printf( PRINT_DEVELOPER, "\nGL_VENDOR: %s\n", glConfig.vendor_string );
+	ri.Printf( PRINT_DEVELOPER, "GL_RENDERER: %s\n", glConfig.renderer_string );
+	ri.Printf( PRINT_DEVELOPER, "GL_VERSION: %s\n", glConfig.version_string );
 
 	if ( glConfig.extensions_string ) {
-		ri.Printf( PRINT_ALL, "GL_EXTENSIONS:  " );
+		ri.Printf( PRINT_DEVELOPER, "GL_EXTENSIONS:  " );
 		stringlen = strlen ( glConfig.extensions_string );
 		stringpos = glConfig.extensions_string;
 		while ( stringlen > 0 ) {
 			Q_strncpyz( stringout, stringpos, 126 );
-			ri.Printf( PRINT_ALL, "%s", stringout );
+			ri.Printf( PRINT_DEVELOPER, "%s", stringout );
 			stringpos += 125;
 			stringlen -= 125;
 		}
-		ri.Printf( PRINT_ALL, "\n" );
+		ri.Printf( PRINT_DEVELOPER, "\n" );
 	}
-	ri.Printf( PRINT_ALL, "GL_MAX_TEXTURE_SIZE: %d\n", glConfig.maxTextureSize );
-	ri.Printf( PRINT_ALL, "GL_MAX_ACTIVE_TEXTURES_ARB: %d\n", glConfig.maxActiveTextures );
-	ri.Printf( PRINT_ALL, "\nPIXELFORMAT: color(%d-bits) Z(%d-bit) stencil(%d-bits)\n", glConfig.colorBits, glConfig.depthBits, glConfig.stencilBits );
-	ri.Printf( PRINT_ALL, "MODE: %d, %d x %d %s hz:", r_mode->integer, glConfig.vidWidth, glConfig.vidHeight, fsstrings[r_fullscreen->integer == 1] );
+	ri.Printf( PRINT_DEVELOPER, "GL_MAX_TEXTURE_SIZE: %d\n", glConfig.maxTextureSize );
+	ri.Printf( PRINT_DEVELOPER, "GL_MAX_ACTIVE_TEXTURES_ARB: %d\n", glConfig.maxActiveTextures );
+	ri.Printf( PRINT_DEVELOPER, "\nPIXELFORMAT: color(%d-bits) Z(%d-bit) stencil(%d-bits)\n", glConfig.colorBits, glConfig.depthBits, glConfig.stencilBits );
+	ri.Printf( PRINT_DEVELOPER, "MODE: %d, %d x %d %s hz:", r_mode->integer, glConfig.vidWidth, glConfig.vidHeight, fsstrings[r_fullscreen->integer == 1] );
 	if ( glConfig.displayFrequency ) {
-		ri.Printf( PRINT_ALL, "%d\n", glConfig.displayFrequency );
+		ri.Printf( PRINT_DEVELOPER, "%d\n", glConfig.displayFrequency );
 	} else
 	{
-		ri.Printf( PRINT_ALL, "N/A\n" );
+		ri.Printf( PRINT_DEVELOPER, "N/A\n" );
 	}
 	if ( glConfig.deviceSupportsGamma ) {
-		ri.Printf( PRINT_ALL, "GAMMA: hardware w/ %d overbright bits\n", tr.overbrightBits );
+		ri.Printf( PRINT_DEVELOPER, "GAMMA: hardware w/ %d overbright bits\n", tr.overbrightBits );
 	} else
 	{
-		ri.Printf( PRINT_ALL, "GAMMA: software w/ %d overbright bits\n", tr.overbrightBits );
+		ri.Printf( PRINT_DEVELOPER, "GAMMA: software w/ %d overbright bits\n", tr.overbrightBits );
 	}
-	ri.Printf( PRINT_ALL, "CPU: %s\n", sys_cpustring->string );
+	ri.Printf( PRINT_DEVELOPER, "CPU: %s\n", sys_cpustring->string );
 
 	// rendering primitives
 	{
 		int primitives;
 
 		// default is to use triangles if compiled vertex arrays are present
-		ri.Printf( PRINT_ALL, "rendering primitives: " );
+		ri.Printf( PRINT_DEVELOPER, "rendering primitives: " );
 		primitives = r_primitives->integer;
 		if ( primitives == 0 ) {
 			if ( qglLockArraysEXT ) {
@@ -896,52 +896,52 @@ void GfxInfo_f( void ) {
 			}
 		}
 		if ( primitives == -1 ) {
-			ri.Printf( PRINT_ALL, "none\n" );
+			ri.Printf( PRINT_DEVELOPER, "none\n" );
 		} else if ( primitives == 2 ) {
-			ri.Printf( PRINT_ALL, "single glDrawElements\n" );
+			ri.Printf( PRINT_DEVELOPER, "single glDrawElements\n" );
 		} else if ( primitives == 1 ) {
-			ri.Printf( PRINT_ALL, "multiple glArrayElement\n" );
+			ri.Printf( PRINT_DEVELOPER, "multiple glArrayElement\n" );
 		} else if ( primitives == 3 ) {
-			ri.Printf( PRINT_ALL, "multiple glColor4ubv + glTexCoord2fv + glVertex3fv\n" );
+			ri.Printf( PRINT_DEVELOPER, "multiple glColor4ubv + glTexCoord2fv + glVertex3fv\n" );
 		}
 	}
 
-	ri.Printf( PRINT_ALL, "texturemode: %s\n", r_textureMode->string );
-	ri.Printf( PRINT_ALL, "picmip: %d\n", r_picmip->integer );
-	ri.Printf( PRINT_ALL, "picmip2: %d\n", r_picmip2->integer );
-	ri.Printf( PRINT_ALL, "texture bits: %d\n", r_texturebits->integer );
-	ri.Printf( PRINT_ALL, "multitexture: %s\n", enablestrings[qglActiveTextureARB != 0] );
-	ri.Printf( PRINT_ALL, "compiled vertex arrays: %s\n", enablestrings[qglLockArraysEXT != 0 ] );
-	ri.Printf( PRINT_ALL, "texenv add: %s\n", enablestrings[glConfig.textureEnvAddAvailable != 0] );
-	ri.Printf( PRINT_ALL, "compressed textures: %s\n", enablestrings[glConfig.textureCompression != TC_NONE] );
+	ri.Printf( PRINT_DEVELOPER, "texturemode: %s\n", r_textureMode->string );
+	ri.Printf( PRINT_DEVELOPER, "picmip: %d\n", r_picmip->integer );
+	ri.Printf( PRINT_DEVELOPER, "picmip2: %d\n", r_picmip2->integer );
+	ri.Printf( PRINT_DEVELOPER, "texture bits: %d\n", r_texturebits->integer );
+	ri.Printf( PRINT_DEVELOPER, "multitexture: %s\n", enablestrings[qglActiveTextureARB != 0] );
+	ri.Printf( PRINT_DEVELOPER, "compiled vertex arrays: %s\n", enablestrings[qglLockArraysEXT != 0 ] );
+	ri.Printf( PRINT_DEVELOPER, "texenv add: %s\n", enablestrings[glConfig.textureEnvAddAvailable != 0] );
+	ri.Printf( PRINT_DEVELOPER, "compressed textures: %s\n", enablestrings[glConfig.textureCompression != TC_NONE] );
 
-	ri.Printf( PRINT_ALL, "ATI truform: %s\n", enablestrings[qglPNTrianglesiATI != 0] );
+	ri.Printf( PRINT_DEVELOPER, "ATI truform: %s\n", enablestrings[qglPNTrianglesiATI != 0] );
 	if ( qglPNTrianglesiATI ) {
 //DAJ bogus at this point		ri.Printf( PRINT_ALL, "MAX_PN_TRIANGLES_TESSELATION_LEVEL_ATI: %d\n", glConfig.ATIMaxTruformTess );
-		ri.Printf( PRINT_ALL, "Truform Tess: %d\n", r_ati_truform_tess->integer );
-		ri.Printf( PRINT_ALL, "Truform Point Mode: %s\n", r_ati_truform_pointmode->string );
-		ri.Printf( PRINT_ALL, "Truform Normal Mode: %s\n", r_ati_truform_normalmode->string );
+		ri.Printf( PRINT_DEVELOPER, "Truform Tess: %d\n", r_ati_truform_tess->integer );
+		ri.Printf( PRINT_DEVELOPER, "Truform Point Mode: %s\n", r_ati_truform_pointmode->string );
+		ri.Printf( PRINT_DEVELOPER, "Truform Normal Mode: %s\n", r_ati_truform_normalmode->string );
 	}
 
-	ri.Printf( PRINT_ALL, "NV distance fog: %s\n", enablestrings[glConfig.NVFogAvailable != 0] );
+	ri.Printf( PRINT_DEVELOPER, "NV distance fog: %s\n", enablestrings[glConfig.NVFogAvailable != 0] );
 	if ( glConfig.NVFogAvailable ) {
-		ri.Printf( PRINT_ALL, "Fog Mode: %s\n", r_nv_fogdist_mode->string );
+		ri.Printf( PRINT_DEVELOPER, "Fog Mode: %s\n", r_nv_fogdist_mode->string );
 	}
 
 	if ( r_vertexLight->integer || glConfig.hardwareType == GLHW_PERMEDIA2 ) {
-		ri.Printf( PRINT_ALL, "HACK: using vertex lightmap approximation\n" );
+		ri.Printf( PRINT_DEVELOPER, "HACK: using vertex lightmap approximation\n" );
 	}
 	if ( glConfig.hardwareType == GLHW_RAGEPRO ) {
-		ri.Printf( PRINT_ALL, "HACK: ragePro approximations\n" );
+		ri.Printf( PRINT_DEVELOPER, "HACK: ragePro approximations\n" );
 	}
 	if ( glConfig.hardwareType == GLHW_RIVA128 ) {
-		ri.Printf( PRINT_ALL, "HACK: riva128 approximations\n" );
+		ri.Printf( PRINT_DEVELOPER, "HACK: riva128 approximations\n" );
 	}
 	if ( glConfig.smpActive ) {
-		ri.Printf( PRINT_ALL, "Using dual processor acceleration\n" );
+		ri.Printf( PRINT_DEVELOPER, "Using dual processor acceleration\n" );
 	}
 	if ( r_finish->integer ) {
-		ri.Printf( PRINT_ALL, "Forcing glFinish\n" );
+		ri.Printf( PRINT_DEVELOPER, "Forcing glFinish\n" );
 	}
 }
 

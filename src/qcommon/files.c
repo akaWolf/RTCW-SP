@@ -2571,7 +2571,7 @@ void FS_Path_f( void ) {
 	}
 
 
-	Com_Printf( "\n" );
+//	Com_Printf( "\n" );
 	for ( i = 1 ; i < MAX_FILE_HANDLES ; i++ ) {
 		if ( fsh[i].handleFiles.file.o ) {
 			Com_Printf( "handle %i: %s\n", i, fsh[i].name );

@@ -454,7 +454,7 @@ void CG_SoundInit( void ) {
 			soundScriptSounds[i].sfxHandle = 0;
 		}
 	} else {
-		CG_Printf(  "\n.........................\n"
+		CG_Printf(  ".........................\n"
 					"Initializing Sound Scripts\n" );
 		CG_SoundLoadSoundFiles();
 		CG_Printf(  "done.\n" );

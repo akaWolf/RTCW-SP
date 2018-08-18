@@ -192,7 +192,7 @@ int GLimp_SetMode(int mode, qboolean fullscreen, qboolean noborder)
 		ri.Printf(PRINT_ALL, " invalid mode\n");
 		return RSERR_INVALID_MODE;
 	}
-	ri.Printf(PRINT_ALL, " %d %d\n", glConfig.vidWidth, glConfig.vidHeight);
+	ri.Printf(PRINT_DEVELOPER, "Resolution: %d %d\n", glConfig.vidWidth, glConfig.vidHeight);
 
 	if (fullscreen)
 	{
@@ -324,7 +324,7 @@ int GLimp_SetMode(int mode, qboolean fullscreen, qboolean noborder)
 		if (!(SDLvidscreen = SDL_CreateWindow( WindowTitle, 0, 0, glConfig.vidWidth, glConfig.vidHeight, flags )))
 			continue;
 
-		ri.Printf(PRINT_ALL, "Using %d/%d/%d Color bits, %d depth, %d stencil display.\n",
+		ri.Printf(PRINT_DEVELOPER, "Using %d/%d/%d Color bits, %d depth, %d stencil display.\n",
 		          sdlcolorbits, sdlcolorbits, sdlcolorbits, tdepthbits, tstencilbits);
 
 		glConfig.colorBits   = tcolorbits;
@@ -333,7 +333,7 @@ int GLimp_SetMode(int mode, qboolean fullscreen, qboolean noborder)
 		break;
 	}
 
-	ri.Printf(PRINT_ALL, "Mode:\n");
+	ri.Printf(PRINT_DEVELOPER, "Mode:\n");
 //	GLimp_DetectAvailableModes();
 
 	if (!SDLvidscreen)
@@ -354,7 +354,7 @@ qboolean GLimp_StartDriverAndSetMode(int mode, qboolean fullscreen, qboolean nob
 
 		if (SDL_Init(SDL_INIT_VIDEO) == -1)
 		{
-			ri.Printf(PRINT_ALL, "SDL_Init( SDL_INIT_VIDEO ) FAILED (%s)\n",
+			ri.Printf(PRINT_DEVELOPER, "SDL_Init( SDL_INIT_VIDEO ) FAILED (%s)\n",
 			          SDL_GetError());
 			return qfalse;
 		}
@@ -362,14 +362,14 @@ qboolean GLimp_StartDriverAndSetMode(int mode, qboolean fullscreen, qboolean nob
 		driverName = SDL_GetCurrentVideoDriver();
 		if ( driverName )
 		{
-			ri.Printf(PRINT_ALL, "SDL using driver \"%s\"\n", driverName);
+			ri.Printf(PRINT_DEVELOPER, "SDL using driver \"%s\"\n", driverName);
 			Cvar_Set("r_sdlDriver", driverName);
 		}
 	}
 
 	if (fullscreen && Cvar_VariableIntegerValue("in_nograb"))
 	{
-		ri.Printf(PRINT_ALL, "Fullscreen not allowed with in_nograb 1\n");
+		ri.Printf(PRINT_DEVELOPER, "Fullscreen not allowed with in_nograb 1\n");
 		ri.Cvar_Set("r_fullscreen", "0");
 		r_fullscreen->modified = qfalse;
 		fullscreen             = qfalse;
@@ -386,7 +386,7 @@ qboolean GLimp_StartDriverAndSetMode(int mode, qboolean fullscreen, qboolean nob
 		ri.Printf(PRINT_ALL, "WARNING: could not set mode: (%d)\n", mode);
 		return qfalse;
 	default:
-		ri.Printf(PRINT_ALL, "Set video mode: (%d)\n", mode);
+		ri.Printf(PRINT_DEVELOPER, "Set video mode: (%d)\n", mode);
 		break;
 	}
 
@@ -422,16 +422,16 @@ static void GLimp_InitExtensions(void)
 			if (r_ext_compressed_textures->value)
 			{
 				glConfig.textureCompression = TC_S3TC;
-				ri.Printf(PRINT_ALL, "...using GL_S3_s3tc\n");
+				ri.Printf(PRINT_DEVELOPER, "...using GL_S3_s3tc\n");
 			}
 			else
 			{
-				ri.Printf(PRINT_ALL, "...ignoring GL_S3_s3tc\n");
+				ri.Printf(PRINT_DEVELOPER, "...ignoring GL_S3_s3tc\n");
 			}
 		}
 		else
 		{
-			ri.Printf(PRINT_ALL, "...GL_S3_s3tc not found\n");
+			ri.Printf(PRINT_DEVELOPER, "...GL_S3_s3tc not found\n");
 		}
 	}
 
@@ -441,17 +441,17 @@ static void GLimp_InitExtensions(void)
 		if (r_ext_texture_env_add->integer)
 		{
 			glConfig.textureEnvAddAvailable = qtrue;
-			ri.Printf(PRINT_ALL, "...using GL_EXT_texture_env_add\n");
+			ri.Printf(PRINT_DEVELOPER, "...using GL_EXT_texture_env_add\n");
 		}
 		else
 		{
 			glConfig.textureEnvAddAvailable = qfalse;
-			ri.Printf(PRINT_ALL, "...ignoring GL_EXT_texture_env_add\n");
+			ri.Printf(PRINT_DEVELOPER, "...ignoring GL_EXT_texture_env_add\n");
 		}
 	}
 	else
 	{
-		ri.Printf(PRINT_ALL, "...GL_EXT_texture_env_add not found\n");
+		ri.Printf(PRINT_DEVELOPER, "...GL_EXT_texture_env_add not found\n");
 	}
 
 	qglMultiTexCoord2fARB     = NULL;
@@ -472,32 +472,32 @@ static void GLimp_InitExtensions(void)
 				glConfig.maxActiveTextures = (int) glint;
 				if (glConfig.maxActiveTextures > 1)
 				{
-					ri.Printf(PRINT_ALL, "...using GL_ARB_multitexture\n");
+					ri.Printf(PRINT_DEVELOPER, "...using GL_ARB_multitexture\n");
 				}
 				else
 				{
 					qglMultiTexCoord2fARB     = NULL;
 					qglActiveTextureARB       = NULL;
 					qglClientActiveTextureARB = NULL;
-					ri.Printf(PRINT_ALL, "...not using GL_ARB_multitexture, < 2 texture units\n");
+					ri.Printf(PRINT_DEVELOPER, "...not using GL_ARB_multitexture, < 2 texture units\n");
 				}
 			}
 		}
 		else
 		{
-			ri.Printf(PRINT_ALL, "...ignoring GL_ARB_multitexture\n");
+			ri.Printf(PRINT_DEVELOPER, "...ignoring GL_ARB_multitexture\n");
 		}
 	}
 	else
 	{
-		ri.Printf(PRINT_ALL, "...GL_ARB_multitexture not found\n");
+		ri.Printf(PRINT_DEVELOPER, "...GL_ARB_multitexture not found\n");
 	}
 
 	if (GLimp_HaveExtension("GL_EXT_compiled_vertex_array"))
 	{
 		if (r_ext_compiled_vertex_array->value)
 		{
-			ri.Printf(PRINT_ALL, "...using GL_EXT_compiled_vertex_array\n");
+			ri.Printf(PRINT_DEVELOPER, "...using GL_EXT_compiled_vertex_array\n");
 			qglLockArraysEXT   = (void (APIENTRY *)(GLint, GLint))SDL_GL_GetProcAddress("glLockArraysEXT");
 			qglUnlockArraysEXT = (void (APIENTRY *)(void))SDL_GL_GetProcAddress("glUnlockArraysEXT");
 			if (!qglLockArraysEXT || !qglUnlockArraysEXT)
@@ -507,12 +507,12 @@ static void GLimp_InitExtensions(void)
 		}
 		else
 		{
-			ri.Printf(PRINT_ALL, "...ignoring GL_EXT_compiled_vertex_array\n");
+			ri.Printf(PRINT_DEVELOPER, "...ignoring GL_EXT_compiled_vertex_array\n");
 		}
 	}
 	else
 	{
-		ri.Printf(PRINT_ALL, "...GL_EXT_compiled_vertex_array not found\n");
+		ri.Printf(PRINT_DEVELOPER, "...GL_EXT_compiled_vertex_array not found\n");
 	}
 
 }

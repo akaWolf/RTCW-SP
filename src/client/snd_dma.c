@@ -124,28 +124,28 @@ S_SoundInfo_f
 ================
 */
 void S_SoundInfo_f( void ) {
-	Com_Printf( "----- Sound Info -----\n" );
+	Com_DPrintf( "----- Sound Info -----\n" );
 	if ( !snd.s_soundStarted ) {
-		Com_Printf( "sound system not started\n" );
+		Com_DPrintf( "sound system not started\n" );
 	} else {
 		if ( snd.s_soundMute ) {
-			Com_Printf( "sound system is muted\n" );
+			Com_DPrintf( "sound system is muted\n" );
 		}
 
-		Com_Printf( "%5d stereo\n", dma.channels - 1 );
-		Com_Printf( "%5d samples\n", dma.samples );
-		Com_Printf( "%5d samplebits\n", dma.samplebits );
-		Com_Printf( "%5d submission_chunk\n", dma.submission_chunk );
-		Com_Printf( "%5d speed\n", dma.speed );
-		Com_Printf( "0x%x dma buffer\n", dma.buffer );
+		Com_DPrintf( "%5d stereo\n", dma.channels - 1 );
+		Com_DPrintf( "%5d samples\n", dma.samples );
+		Com_DPrintf( "%5d samplebits\n", dma.samplebits );
+		Com_DPrintf( "%5d submission_chunk\n", dma.submission_chunk );
+		Com_DPrintf( "%5d speed\n", dma.speed );
+		Com_DPrintf( "0x%x dma buffer\n", dma.buffer );
 		if ( streamingSounds[0].file ) {
-			Com_Printf( "Background file: %s\n", streamingSounds[0].loop );
+			Com_DPrintf( "Background file: %s\n", streamingSounds[0].loop );
 		} else {
-			Com_Printf( "No background file.\n" );
+			Com_DPrintf( "No background file.\n" );
 		}
 
 	}
-	Com_Printf( "----------------------\n" );
+	Com_DPrintf( "----------------------\n" );
 }
 
 void S_ChannelSetup();
@@ -159,7 +159,7 @@ void S_Init( void ) {
 	cvar_t  *cv;
 	qboolean r;
 
-	Com_Printf( "\n------- sound initialization -------\n" );
+	Com_Printf( "------- sound initialization -------\n" );
 
 	s_mute = Cvar_Get( "s_mute", "0", CVAR_TEMP ); //----(SA)	added
 	s_volume = Cvar_Get( "s_volume", "0.8", CVAR_ARCHIVE );
