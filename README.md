@@ -87,11 +87,23 @@ You can specify needed parameters at command line like so: `./wolf +set r_mode -
 
 ## Some variables
 
-`r_mode` can be:
+Set `r_fullscreen` to `1` for fullscreen mode.
+
+`r_mode` is a resolution mode. it can be:
 
 * `-2` (desktop resolution)
 * `-1` (resolution is `r_customwidth` x `r_customheight`)
 * `0` .. `12` (see [tr_init.c](src/renderer/tr_init.c#L383))
+
+`fs_basepath` is the path to the directory holding all the game directories and usually the executable.
+
+`fs_cdpath` is the path to an alternate hierarchy that will be searched if a file is not located in the base path.
+
+You can set `fs_basepath` to the directory where all compiled files are located and `fs_cdpath` to the directory where all resources are located.
+
+Set `fs_debug` to `1` for debugging filesystem subsystem.
+
+Set `developer` to `1` for verbose log.
 
 ## License
 
