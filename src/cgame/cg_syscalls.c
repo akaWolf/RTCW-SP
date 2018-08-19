@@ -50,6 +50,10 @@ int PASSFLOAT( float x ) {
 	return *(int *)&floatTemp;
 }
 
+void trap_DPrint( const char *string ) {
+	syscall( CG_DPRINT, string );
+}
+
 void    trap_Print( const char *fmt ) {
 	syscall( CG_PRINT, fmt );
 }

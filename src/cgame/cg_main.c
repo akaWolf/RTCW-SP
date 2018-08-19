@@ -560,6 +560,17 @@ int CG_LastAttacker( void ) {
 	return cg.snap->ps.persistant[PERS_ATTACKER];
 }
 
+void QDECL CG_DPrintf( const char *msg, ... ) {
+	va_list argptr;
+	char text[1024];
+
+	va_start( argptr, msg );
+	vsprintf( text, msg, argptr );
+	va_end( argptr );
+
+	trap_DPrint( text );
+}
+
 void QDECL CG_Printf( const char *msg, ... ) {
 	va_list argptr;
 	char text[1024];

@@ -435,6 +435,9 @@ The cgame module is making a system call
 #define VMF( x )  ( *(float *)&args[x] )
 intptr_t CL_CgameSystemCalls( intptr_t *args ) {
 	switch ( args[0] ) {
+	case CG_DPRINT:
+		Com_DPrintf( "%s", VMA( 1 ) );
+		return 0;
 	case CG_PRINT:
 		Com_Printf( "%s", VMA( 1 ) );
 		return 0;

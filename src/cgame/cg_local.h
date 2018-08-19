@@ -1794,6 +1794,7 @@ const char *CG_Argv( int arg );
 // CG_Argv uses static string, need second version for concurrent use:
 const char *CG_Argv2( int arg );
 
+void QDECL CG_DPrintf( const char *msg, ... );
 void QDECL CG_Printf( const char *msg, ... );
 void QDECL CG_Error( const char *msg, ... );
 
@@ -2223,6 +2224,9 @@ void CG_LoadClientInfo( clientInfo_t *ci );
 // system traps
 // These functions are how the cgame communicates with the main game system
 //
+
+// print developer message on the local console
+void        trap_DPrint( const char *fmt );
 
 // print message on the local console
 void        trap_Print( const char *fmt );
