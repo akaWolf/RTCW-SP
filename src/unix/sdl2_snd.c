@@ -215,7 +215,7 @@ qboolean SNDDMA_Init(void)
 		}
 	}
 
-	Com_Printf("OK\n");
+	Com_DPrintf("OK\n");
 
 	drivername  = SDL_GetCurrentAudioDriver();
 	if ( drivername )
