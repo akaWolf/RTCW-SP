@@ -99,6 +99,8 @@ Set `r_fullscreen` to `1` for fullscreen mode.
 
 `fs_cdpath` is the path to an alternate hierarchy that will be searched if a file is not located in the base path.
 
+Set `fs_game` to `.` if you want to skip default additional directory level under described paths named `main`.
+
 You can set `fs_basepath` to the directory where all compiled files are located and `fs_cdpath` to the directory where all resources are located.
 
 Set `fs_debug` to `1` for debugging filesystem subsystem.
