@@ -1934,10 +1934,10 @@ for a few moments
 ==============
 */
 void CG_CenterPrint( const char *str, int y, int charWidth ) {
-	char   *s;
+	unsigned char   *s;
 
 //----(SA)	added translation lookup
-	Q_strncpyz( cg.centerPrint, CG_translateString( (char*)str ), sizeof( cg.centerPrint ) );
+	Q_strncpyz( (char *)cg.centerPrint, CG_translateString( (char*)str ), sizeof( cg.centerPrint ) );
 //----(SA)	end
 
 
@@ -1952,7 +1952,7 @@ void CG_CenterPrint( const char *str, int y, int charWidth ) {
 		if ( *s == '\n' ) {
 			cg.centerPrintLines++;
 		}
-		if ( !Q_strncmp( s, "\\n", 1 ) ) {
+		if ( !Q_strncmp( (char *)s, "\\n", 1 ) ) {
 			cg.centerPrintLines++;
 			s++;
 		}
@@ -1967,7 +1967,7 @@ CG_DrawCenterString
 ===================
 */
 static void CG_DrawCenterString( void ) {
-	char    *start;
+	unsigned char    *start;
 	int l;
 	int x, y, w;
 	float   *color;
@@ -1991,7 +1991,7 @@ static void CG_DrawCenterString( void ) {
 		char linebuffer[1024];
 
 		for ( l = 0; l < 40; l++ ) {
-			if ( !start[l] || start[l] == '\n' || !Q_strncmp( &start[l], "\\n", 1 ) ) {
+			if ( !start[l] || start[l] == '\n' || !Q_strncmp( (char *)&start[l], "\\n", 1 ) ) {
 				break;
 			}
 			linebuffer[l] = start[l];
@@ -2010,7 +2010,7 @@ static void CG_DrawCenterString( void ) {
 
 //		while ( *start && ( *start != '\n' ) && !Q_strncmp(start, "\\n", 1) ) {
 		while ( *start && ( *start != '\n' ) ) {
-			if ( !Q_strncmp( start, "\\n", 1 ) ) {
+			if ( !Q_strncmp( (char *)start, "\\n", 1 ) ) {
 				start++;
 				break;
 			}

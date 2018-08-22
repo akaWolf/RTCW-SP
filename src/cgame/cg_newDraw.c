@@ -1827,9 +1827,9 @@ static void CG_Text_Paint_Limit( float *maxX, float x, float y, int font, float 
 		}
 		count = 0;
 		while ( s && *s && count < len ) {
-			glyph = &fnt->glyphs[(uint8_t)*s];
+			glyph = &fnt->glyphs[(unsigned char)*s];
 			if ( Q_IsColorString( s ) ) {
-				memcpy( newColor, g_color_table[ColorIndex( (uint8_t)*( s + 1 ) )], sizeof( newColor ) );
+				memcpy( newColor, g_color_table[ColorIndex( *( s + 1 ) )], sizeof( newColor ) );
 				newColor[3] = color[3];
 				trap_R_SetColor( newColor );
 				s += 2;

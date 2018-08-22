@@ -383,7 +383,7 @@ int Text_Height( const char *text, int font, float scale, int limit ) {
 				s += 2;
 				continue;
 			} else {
-				glyph = &fnt->glyphs[(uint8_t)*s];
+				glyph = &fnt->glyphs[(unsigned char)*s];
 				if ( max < glyph->height ) {
 					max = glyph->height;
 				}
@@ -435,11 +435,11 @@ void Text_Paint( float x, float y, int font, float scale, vec4_t color, const ch
 		}
 		count = 0;
 		while ( s && *s && count < len ) {
-			glyph = &fnt->glyphs[(uint8_t)*s];
+			glyph = &fnt->glyphs[(unsigned char)*s];
 			//int yadj = Assets.textFont.glyphs[text[i]].bottom + Assets.textFont.glyphs[text[i]].top;
 			//float yadj = scale * (Assets.textFont.glyphs[text[i]].imageHeight - Assets.textFont.glyphs[text[i]].height);
 			if ( Q_IsColorString( s ) ) {
-				memcpy( newColor, g_color_table[ColorIndex( (uint8_t)*( s + 1 ) )], sizeof( newColor ) );
+				memcpy( newColor, g_color_table[ColorIndex( *( s + 1 ) )], sizeof( newColor ) );
 				newColor[3] = color[3];
 				trap_R_SetColor( newColor );
 				s += 2;
@@ -515,13 +515,13 @@ void Text_PaintWithCursor( float x, float y, int font, float scale, vec4_t color
 			len = limit;
 		}
 		count = 0;
-		glyph2 = &fnt->glyphs[(uint8_t)cursor];
+		glyph2 = &fnt->glyphs[(unsigned char)cursor];
 		while ( s && *s && count < len ) {
-			glyph = &fnt->glyphs[(uint8_t)*s];
+			glyph = &fnt->glyphs[(unsigned char)*s];
 			//int yadj = Assets.textFont.glyphs[text[i]].bottom + Assets.textFont.glyphs[text[i]].top;
 			//float yadj = scale * (Assets.textFont.glyphs[text[i]].imageHeight - Assets.textFont.glyphs[text[i]].height);
 			if ( Q_IsColorString( s ) ) {
-				memcpy( newColor, g_color_table[ColorIndex( (uint8_t)*( s + 1 ) )], sizeof( newColor ) );
+				memcpy( newColor, g_color_table[ColorIndex( *( s + 1 ) )], sizeof( newColor ) );
 				newColor[3] = color[3];
 				trap_R_SetColor( newColor );
 				s += 2;
