@@ -455,9 +455,9 @@ int PC_StringizeTokens( token_t *tokens, token_t *token ) {
 	token_t *t;
 
 	token->type = TT_STRING;
-	token->whitespace_p = NULL;
-	token->endwhitespace_p = NULL;
 	token->string[0] = '\0';
+	token->whitespace_p = &token->string[0];
+	token->endwhitespace_p = &token->string[0];
 	strcat( token->string, "\"" );
 	for ( t = tokens; t; t = t->next )
 	{
@@ -1059,7 +1059,7 @@ int PC_ReadLine( source_t *source, token_t *token ) {
 // Changes Globals:		-
 //============================================================================
 int PC_WhiteSpaceBeforeToken( token_t *token ) {
-	return token->endwhitespace_p - token->whitespace_p > 0;
+	return token->endwhitespace_p > token->whitespace_p;
 } //end of the function PC_WhiteSpaceBeforeToken
 //============================================================================
 //
@@ -1068,8 +1068,8 @@ int PC_WhiteSpaceBeforeToken( token_t *token ) {
 // Changes Globals:		-
 //============================================================================
 void PC_ClearTokenWhiteSpace( token_t *token ) {
-	token->whitespace_p = NULL;
-	token->endwhitespace_p = NULL;
+	token->whitespace_p = &token->string[0];
+	token->endwhitespace_p = &token->string[0];
 	token->linescrossed = 0;
 } //end of the function PC_ClearTokenWhiteSpace
 //============================================================================
