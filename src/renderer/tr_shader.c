@@ -983,16 +983,13 @@ static qboolean ParseStage( shaderStage_t *stage, char **text ) {
 	}
 
 	// decide which agens we can skip
-	// TODO: what should we really skip? alphaGen == CGEN_IDENTITY is wrong,
-	// but alphaGen == AGEN_IDENTITY also gives wrong result.
-#if 0
-	if ( stage->alphaGen == CGEN_IDENTITY ) {
+	// looks like we can't skip cgen lighting diffuse
+	if ( stage->alphaGen == AGEN_IDENTITY ) {
 		if ( stage->rgbGen == CGEN_IDENTITY
-			 || stage->rgbGen == CGEN_LIGHTING_DIFFUSE ) {
+			/* || stage->rgbGen == CGEN_LIGHTING_DIFFUSE*/ ) {
 			stage->alphaGen = AGEN_SKIP;
 		}
 	}
-#endif
 
 	//
 	// compute state bits
