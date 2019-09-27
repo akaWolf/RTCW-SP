@@ -732,7 +732,39 @@ void *Sys_LoadDll( const char *name,
 					} else {
 						Com_Printf( "ok\n" );
 					}
-				} // end BASEGAME != fs_game section
+				} else { // end BASEGAME != fs_game section
+					// start the loop again using empty gamename
+					fn = FS_BuildOSPath( pwdpath, ".", fname );
+					Com_Printf( "Sys_LoadDll(%s)... ", fn );
+					libHandle = dlopen( fn, Q_RTLD );
+
+					if ( !libHandle ) {
+						Com_Printf( "failed (%s)\n", dlerror() );
+						// homepath
+						fn = FS_BuildOSPath( homepath, ".", fname );
+						Com_Printf( "Sys_LoadDll(%s)... ", fn );
+						libHandle = dlopen( fn, Q_RTLD );
+
+						if ( !libHandle ) {
+							Com_Printf( "failed (%s)\n", dlerror() );
+							// homepath
+							fn = FS_BuildOSPath( basepath, ".", fname );
+							Com_Printf( "Sys_LoadDll(%s)... ", fn );
+							libHandle = dlopen( fn, Q_RTLD );
+
+							if ( !libHandle ) {
+								// ok, this time things are really fucked
+								Com_Printf( "failed (%s)\n", dlerror() );
+							} else {
+								Com_Printf( "ok\n" );
+							}
+						} else {
+							Com_Printf( "ok\n" );
+						}
+					} else {
+						Com_Printf( "ok\n" );
+					}
+				}
 			} else {
 				Com_Printf( "ok\n" );
 			}
