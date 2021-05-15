@@ -1527,6 +1527,8 @@ const void  *RB_Clean( const void *data, qboolean save ) {
 	return (const void *)( cmd + 1 );
 }
 
+image_t *createdImage;
+
 // Load Texture from front end via SMP
 const void  *RB_Create_Image( const void *data ){
 	const createImageCommand_t  *cmd;

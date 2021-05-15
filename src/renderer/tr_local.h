@@ -1666,7 +1666,7 @@ typedef struct {
 
 //image_t *R_CreateImage( const char *name, const byte *pic, int width, int height,
 //				qboolean mipmap, qboolean allowPicmip, int glWrapClampMode )
-image_t *createdImage;
+extern image_t *createdImage;
 typedef struct {
 	int commandId;
 	const char *name;

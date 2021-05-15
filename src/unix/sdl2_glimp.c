@@ -57,11 +57,11 @@ static const char *WindowTitle = "RtC Wolfenstein";
 SDL_Window    *SDLvidscreen = NULL;
 SDL_GLContext GLContext     = NULL;
 
-void(APIENTRYP qglActiveTextureARB) (GLenum texture);
-void(APIENTRYP qglClientActiveTextureARB) (GLenum texture);
-void(APIENTRYP qglMultiTexCoord2fARB) (GLenum target, GLfloat s, GLfloat t);
-void(APIENTRYP qglLockArraysEXT) (GLint first, GLsizei count);
-void(APIENTRYP qglUnlockArraysEXT) (void);
+//void(APIENTRYP qglActiveTextureARB) (GLenum texture);
+//void(APIENTRYP qglClientActiveTextureARB) (GLenum texture);
+//void(APIENTRYP qglMultiTexCoord2fARB) (GLenum target, GLfloat s, GLfloat t);
+//void(APIENTRYP qglLockArraysEXT) (GLint first, GLsizei count);
+//void(APIENTRYP qglUnlockArraysEXT) (void);
 
 typedef enum
 {
