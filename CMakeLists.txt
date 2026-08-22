@@ -1,9 +1,6 @@
-project(wolf)
+cmake_minimum_required(VERSION 3.10)
 
-cmake_minimum_required(VERSION 2.9)
-if(COMMAND cmake_policy)
-	cmake_policy(SET CMP0003 NEW)
-endif()
+project(wolf)
 
 option(ENABLE_DEMO "Build demo version")
 
@@ -14,10 +11,15 @@ endif()
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pipe -fsigned-char -fno-strict-aliasing -Wall")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-unused")
+# the C++ part (splines) must see the same char signedness and aliasing rules
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pipe -fsigned-char -fno-strict-aliasing -Wall -Wno-unused")
+set(CMAKE_CXX_FLAGS_DEBUG "-ggdb3")
+set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG")
 
-set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS} -ggdb3")
-# -O3 and -ffast-math breaks passing parameters through VM calls
-set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS} -DNDEBUG")
+# CMAKE_C_FLAGS is appended automatically, no need to repeat it here
+set(CMAKE_C_FLAGS_DEBUG "-ggdb3")
+# no -ffast-math: float args go through int punning in VM calls
+set(CMAKE_C_FLAGS_RELEASE "-O2 -DNDEBUG")
 
 if(ENABLE_DEMO)
 add_definitions(-DWOLF_SP_DEMO)

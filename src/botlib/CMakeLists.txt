@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.9)
+cmake_minimum_required(VERSION 3.10)
 
 # Get all C source files
 file(GLOB C_SOURCES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} "*.c")
