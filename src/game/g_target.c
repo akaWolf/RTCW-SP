@@ -459,6 +459,10 @@ void target_relay_use( gentity_t *self, gentity_t *other, gentity_t *activator )
 		if ( self->key ) {
 			gitem_t *item;
 
+			if ( !activator->client ) {
+				return;     // only players can use key-locked relays
+			}
+
 //			if(self->key == -1)	// relay permanently locked
 			if ( self->key >= KEY_LOCKED_ENT ) { // relay permanently locked
 				if ( self->soundPos1 ) {
@@ -488,7 +492,7 @@ void target_relay_use( gentity_t *self, gentity_t *other, gentity_t *activator )
 				}
 			}
 
-			if ( self->spawnflags & 16 ) { // (SA) take key
+			if ( item && ( self->spawnflags & 16 ) ) { // (SA) take key
 				activator->client->ps.stats[STAT_KEYS] &= ~( 1 << item->giTag );
 				// (SA) TODO: "took inventory item" sound
 			}

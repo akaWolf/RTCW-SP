@@ -139,7 +139,7 @@ void QDECL SourceError( source_t *source, char *str, ... ) {
 	va_list ap;
 
 	va_start( ap, str );
-	vsprintf( text, str, ap );
+	vsnprintf( text, sizeof( text ), str, ap );
 	va_end( ap );
 #ifdef BOTLIB
 	botimport.Print( PRT_ERROR, "file %s, line %d: %s\n", source->scriptstack->filename, source->scriptstack->line, text );
@@ -162,7 +162,7 @@ void QDECL SourceWarning( source_t *source, char *str, ... ) {
 	va_list ap;
 
 	va_start( ap, str );
-	vsprintf( text, str, ap );
+	vsnprintf( text, sizeof( text ), str, ap );
 	va_end( ap );
 #ifdef BOTLIB
 	botimport.Print( PRT_WARNING, "file %s, line %d: %s\n", source->scriptstack->filename, source->scriptstack->line, text );
@@ -297,6 +297,18 @@ void PC_FreeToken( token_t *token ) {
 //	freetokens = token;
 	numtokens--;
 } //end of the function PC_FreeToken
+//============================================================================
+// free a linked list of tokens
+//============================================================================
+static void PC_FreeTokenList( token_t *list ) {
+	token_t *next;
+
+	while ( list ) {
+		next = list->next;
+		PC_FreeToken( list );
+		list = next;
+	}
+} //end of the function PC_FreeTokenList
 //============================================================================
 //
 // Parameter:				-
@@ -750,6 +762,7 @@ int PC_ExpandBuiltinDefine( source_t *source, token_t *deftoken, define_t *defin
 	case BUILTIN_STDC:
 	default:
 	{
+		PC_FreeToken( token );
 		*firsttoken = NULL;
 		*lasttoken = NULL;
 		break;
@@ -828,6 +841,8 @@ int PC_ExpandDefine( source_t *source, token_t *deftoken, define_t *define,
 					//stringize the define parameter tokens
 					if ( !PC_StringizeTokens( parms[parmnum], &token ) ) {
 						SourceError( source, "can't stringize tokens" );
+						//free the tokens gathered so far
+						PC_FreeTokenList( first );
 						return qfalse;
 					} //end if
 					t = PC_CopyToken( &token );
@@ -2158,9 +2173,12 @@ int PC_Evaluate( source_t *source, int *intvalue,
 #endif //DEFINEHASHING
 				if ( !define ) {
 					SourceError( source, "can't evaluate %s, not defined", token.string );
+					//free the tokens gathered so far
+					PC_FreeTokenList( firsttoken );
 					return qfalse;
 				} //end if
 				if ( !PC_ExpandDefineIntoSource( source, &token, define ) ) {
+					PC_FreeTokenList( firsttoken );
 					return qfalse;
 				}
 			} //end else
@@ -2177,6 +2195,8 @@ int PC_Evaluate( source_t *source, int *intvalue,
 		else //can't evaluate the token
 		{
 			SourceError( source, "can't evaluate %s", token.string );
+			//free the tokens gathered so far
+			PC_FreeTokenList( firsttoken );
 			return qfalse;
 		} //end else
 	} while ( PC_ReadLine( source, &token ) );
@@ -2267,9 +2287,12 @@ int PC_DollarEvaluate( source_t *source, int *intvalue,
 #endif //DEFINEHASHING
 				if ( !define ) {
 					SourceError( source, "can't evaluate %s, not defined", token.string );
+					//free the tokens gathered so far
+					PC_FreeTokenList( firsttoken );
 					return qfalse;
 				} //end if
 				if ( !PC_ExpandDefineIntoSource( source, &token, define ) ) {
+					PC_FreeTokenList( firsttoken );
 					return qfalse;
 				}
 			} //end else
@@ -2294,6 +2317,8 @@ int PC_DollarEvaluate( source_t *source, int *intvalue,
 		else //can't evaluate the token
 		{
 			SourceError( source, "can't evaluate %s", token.string );
+			//free the tokens gathered so far
+			PC_FreeTokenList( firsttoken );
 			return qfalse;
 		} //end else
 	} while ( PC_ReadSourceToken( source, &token ) );

@@ -57,6 +57,8 @@ void    trap_Printf( const char *fmt ) {
 
 void    trap_Error( const char *fmt ) {
 	syscall( G_ERROR, fmt );
+	// the engine longjmps away inside the syscall and never comes back
+	exit( 1 );
 }
 
 void    trap_Endgame( void ) {

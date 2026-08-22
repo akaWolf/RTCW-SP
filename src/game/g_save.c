@@ -176,6 +176,10 @@ static ignoreField_t gentityIgnoreFields[] = {
 	{FOFS( numScriptEvents ), sizeof( int )},
 	{FOFS( scriptEvents ),    sizeof( g_script_event_t * ) },   // gets created upon parsing the script file, this is static while playing
 
+	// point into the freshly spawned level's spawn vars: the saved addresses belong to another process
+	{FOFS( targetShaderName ),    sizeof( char * ) },
+	{FOFS( targetShaderNewName ), sizeof( char * ) },
+
 	{0, 0}
 };
 
@@ -185,6 +189,9 @@ static ignoreField_t gclientIgnoreFields[] = {
 	//{CFOFS(ps.eventParms[0]),	sizeof(int) * MAX_EVENTS},
 	//{CFOFS(ps.eventSequence),	sizeof(int)},
 	//{CFOFS(ps.oldEventSequence),sizeof(int)},
+
+	// camera views are not resumed after loading, and a saved entity address is meaningless
+	{CFOFS( cameraPortal ),   sizeof( gentity_t * )},
 
 	{0, 0}
 };

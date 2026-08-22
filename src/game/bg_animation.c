@@ -309,12 +309,12 @@ static long BG_StringHashValue( const char *fname ) {
 BG_AnimParseError
 =================
 */
-void QDECL BG_AnimParseError( const char *msg, ... ) {
+Q_NORETURN void QDECL BG_AnimParseError( const char *msg, ... ) {
 	va_list argptr;
 	char text[1024];
 
 	va_start( argptr, msg );
-	vsprintf( text, msg, argptr );
+	vsnprintf( text, sizeof( text ), msg, argptr );
 	va_end( argptr );
 
 	if ( globalFilename ) {

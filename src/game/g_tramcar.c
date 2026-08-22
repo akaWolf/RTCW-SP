@@ -338,6 +338,9 @@ void Reached_Tramcar( gentity_t *ent ) {
 				Think_SetupAirplaneWaypoints( ent );
 
 				next = ent->nextTrain;
+				if ( !next ) {
+					return;     // track ran out
+				}
 
 				G_Printf( "changed track to %s\n", next->targetname );
 			} else {
@@ -361,6 +364,10 @@ void Reached_Tramcar( gentity_t *ent ) {
 			G_UseTargets( next, NULL );
 
 			return;
+		}
+
+		if ( !ent->nextTrain || !ent->nextTrain->nextTrain ) {
+			return;     // track ran out
 		}
 
 		VectorSubtract( ent->nextTrain->nextTrain->s.origin, ent->r.currentOrigin, vec );

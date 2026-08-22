@@ -973,7 +973,7 @@ void QDECL G_LogPrintf( const char *fmt, ... );
 void SendScoreboardMessageToAllClients( void );
 void QDECL G_Printf( const char *fmt, ... );
 void QDECL G_DPrintf( const char *fmt, ... );
-void QDECL G_Error( const char *fmt, ... );
+void QDECL G_Error( const char *fmt, ... ) Q_NORETURN;
 //----(SA)	added
 void G_EndGame( void );
 int G_SendMissionStats( void );   // return '0' if objectives not met, '1' if met
@@ -1167,7 +1167,7 @@ extern vmCvar_t g_playerStart;      //----(SA)	added
 
 
 void    trap_Printf( const char *fmt );
-void    trap_Error( const char *fmt );
+void    trap_Error( const char *fmt ) Q_NORETURN;
 void    trap_Endgame( void );   //----(SA)	added
 int     trap_Milliseconds( void );
 int     trap_Argc( void );

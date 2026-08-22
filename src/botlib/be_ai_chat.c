@@ -2254,7 +2254,7 @@ int BotExpandChatMessage( char *outmessage, char *message, unsigned mcontext,
 		else
 		{
 			outputbuf[len++] = *msgptr++;
-			if ( len >= MAX_MESSAGE_SIZE ) {
+			if ( len >= MAX_MESSAGE_SIZE - 1 ) {    // leave room for the trailing zero
 				botimport.Print( PRT_ERROR, "BotConstructChat: message \"%s\" too long\n", message );
 				break;
 			} //end if

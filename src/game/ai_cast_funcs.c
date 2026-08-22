@@ -528,7 +528,7 @@ char *AIFunc_Idle( cast_state_t *cs ) {
 				// if we are tactical enough, look for a hiding spot
 				if ( !( cs->leaderNum >= 0 ) && cs->attributes[TACTICAL] > 0.4 && cs->attributes[AGGRESSION] < 1.0 ) {
 					// they can see us, and we want to hide from them
-					if ( AICast_GetTakeCoverPos( cs, cs->enemyNum, cs->vislist[cs->enemyNum].visible_pos, cs->takeCoverPos ) ) {
+					if ( cs->enemyNum >= 0 && AICast_GetTakeCoverPos( cs, cs->enemyNum, cs->vislist[cs->enemyNum].visible_pos, cs->takeCoverPos ) ) {
 						// go to a position that cannot be seen from the last place we saw the enemy, and wait there for some time
 						cs->takeCoverTime = level.time + 2000 + rand() % 3000;
 						return AIFunc_BattleTakeCoverStart( cs );
@@ -2423,7 +2423,7 @@ char *AIFunc_BattleAmbush( cast_state_t *cs ) {
 			if ( !AICast_GotEnoughAmmoForWeapon( cs, cs->weaponNum ) ) {
 				// NO AMMO LEFT!!
 				// hide?
-				if ( AICast_GetTakeCoverPos( cs, cs->enemyNum, cs->vislist[cs->enemyNum].visible_pos, cs->takeCoverPos ) ) {
+				if ( cs->enemyNum >= 0 && AICast_GetTakeCoverPos( cs, cs->enemyNum, cs->vislist[cs->enemyNum].visible_pos, cs->takeCoverPos ) ) {
 					// go to a position that cannot be seen from the last place we saw the enemy, and wait there for some time
 					cs->takeCoverTime = level.time + 2000 + rand() % 3000;
 					return AIFunc_BattleTakeCoverStart( cs );
@@ -3413,7 +3413,7 @@ char *AIFunc_BattleTakeCover( cast_state_t *cs ) {
 				if ( !AICast_GotEnoughAmmoForWeapon( cs, cs->weaponNum ) ) {
 					// NO AMMO LEFT!!
 					// hide?
-					if ( AICast_GetTakeCoverPos( cs, cs->enemyNum, cs->vislist[cs->enemyNum].visible_pos, cs->takeCoverPos ) ) {
+					if ( cs->enemyNum >= 0 && AICast_GetTakeCoverPos( cs, cs->enemyNum, cs->vislist[cs->enemyNum].visible_pos, cs->takeCoverPos ) ) {
 						// go to a position that cannot be seen from the last place we saw the enemy, and wait there for some time
 						cs->takeCoverTime = level.time + 2000 + rand() % 3000;
 						//return AIFunc_BattleTakeCoverStart( cs );
@@ -3428,7 +3428,7 @@ char *AIFunc_BattleTakeCover( cast_state_t *cs ) {
 	// always do this check, if our destination sucks, abort it
 	{
 		// if the enemy can see our hide position, find a better spot
-		if ( AICast_VisibleFromPos( cs->vislist[cs->enemyNum].visible_pos, cs->enemyNum, cs->takeCoverPos, bs->entitynum, qfalse ) ) {
+		if ( cs->enemyNum >= 0 && AICast_VisibleFromPos( cs->vislist[cs->enemyNum].visible_pos, cs->enemyNum, cs->takeCoverPos, bs->entitynum, qfalse ) ) {
 			if ( !AICast_GetTakeCoverPos( cs, cs->enemyNum, cs->vislist[cs->enemyNum].visible_pos, cs->takeCoverPos ) ) {
 				// shit!! umm.. try and fire?
 				return AIFunc_BattleStart( cs );
@@ -3438,7 +3438,7 @@ char *AIFunc_BattleTakeCover( cast_state_t *cs ) {
 				vec[2] *= 0.2;
 				dist = VectorLength( vec );
 			}
-		} else if ( dist < 8 )     {
+		} else if ( dist < 8 && cs->enemyNum >= 0 )     {
 			// if they can see us, find a better spot
 			if ( AICast_EntityVisible( AICast_GetCastState( cs->enemyNum ), cs->entityNum, qtrue ) || AICast_CheckAttack( AICast_GetCastState( cs->enemyNum ), cs->entityNum, qfalse ) ) {
 				if ( !AICast_GetTakeCoverPos( cs, cs->enemyNum, cs->vislist[cs->enemyNum].visible_pos, cs->takeCoverPos ) ) {
@@ -3563,7 +3563,8 @@ char *AIFunc_BattleTakeCover( cast_state_t *cs ) {
 		else if ( numEnemies ) {
 
 			// are they reloading? if so we should attack!
-			if (    g_entities[cs->entityNum].client->ps.weaponDelay < 100
+			if (    cs->enemyNum >= 0
+					&&  g_entities[cs->entityNum].client->ps.weaponDelay < 100
 					&&  g_entities[cs->enemyNum].client->ps.weaponDelay > 1100 ) {
 				if ( AICast_GotEnoughAmmoForWeapon( cs, cs->weaponNum ) && AICast_WeaponUsable( cs, cs->weaponNum ) ) {
 					return AIFunc_BattleStart( cs );

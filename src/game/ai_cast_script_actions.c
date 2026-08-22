@@ -383,10 +383,6 @@ qboolean AICast_ScriptAction_GotoCast( cast_state_t *cs, char *params ) {
 		return qtrue;
 	}
 
-	if ( !ent ) {
-		G_Error( "AI Scripting: can't find ai_marker with \"targetname\" = \"%s\"\n", token );
-	}
-
 	cs->castScriptStatus.scriptNoMoveTime = 0;
 	cs->castScriptStatus.scriptGotoEnt = ent->s.number;
 	//
