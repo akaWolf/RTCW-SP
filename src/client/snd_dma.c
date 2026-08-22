@@ -124,28 +124,28 @@ S_SoundInfo_f
 ================
 */
 void S_SoundInfo_f( void ) {
-	Com_DPrintf( "----- Sound Info -----\n" );
+	Com_Printf( "----- Sound Info -----\n" );
 	if ( !snd.s_soundStarted ) {
-		Com_DPrintf( "sound system not started\n" );
+		Com_Printf( "sound system not started\n" );
 	} else {
 		if ( snd.s_soundMute ) {
-			Com_DPrintf( "sound system is muted\n" );
+			Com_Printf( "sound system is muted\n" );
 		}
 
-		Com_DPrintf( "%5d stereo\n", dma.channels - 1 );
-		Com_DPrintf( "%5d samples\n", dma.samples );
-		Com_DPrintf( "%5d samplebits\n", dma.samplebits );
-		Com_DPrintf( "%5d submission_chunk\n", dma.submission_chunk );
-		Com_DPrintf( "%5d speed\n", dma.speed );
-		Com_DPrintf( "0x%x dma buffer\n", dma.buffer );
+		Com_Printf( "%5d stereo\n", dma.channels - 1 );
+		Com_Printf( "%5d samples\n", dma.samples );
+		Com_Printf( "%5d samplebits\n", dma.samplebits );
+		Com_Printf( "%5d submission_chunk\n", dma.submission_chunk );
+		Com_Printf( "%5d speed\n", dma.speed );
+		Com_Printf( "0x%x dma buffer\n", dma.buffer );
 		if ( streamingSounds[0].file ) {
-			Com_DPrintf( "Background file: %s\n", streamingSounds[0].loop );
+			Com_Printf( "Background file: %s\n", streamingSounds[0].loop );
 		} else {
-			Com_DPrintf( "No background file.\n" );
+			Com_Printf( "No background file.\n" );
 		}
 
 	}
-	Com_DPrintf( "----------------------\n" );
+	Com_Printf( "----------------------\n" );
 }
 
 void S_ChannelSetup();
@@ -167,7 +167,7 @@ void S_Init( void ) {
 	s_currentMusic = Cvar_Get( "s_currentMusic", "", CVAR_ROM );
 	s_separation = Cvar_Get( "s_separation", "0.5", CVAR_ARCHIVE );
 	s_doppler = Cvar_Get( "s_doppler", "1", CVAR_ARCHIVE );
-	s_khz = Cvar_Get( "s_khz", "22", CVAR_ARCHIVE );
+	s_khz = Cvar_Get( "s_khz", "44", CVAR_ARCHIVE );
 	s_mixahead = Cvar_Get( "s_mixahead", "0.5", CVAR_ARCHIVE );    //DAJ was 0.2
 	s_debugMusic = Cvar_Get( "s_debugMusic", "0", CVAR_TEMP );
 
@@ -217,7 +217,10 @@ void S_Init( void ) {
 
 		S_StopAllSounds();
 
-		S_SoundInfo_f();
+		// spammy - only in developer mode; the explicit "s_info" command always prints
+		if ( com_developer && com_developer->integer ) {
+			S_SoundInfo_f();
+		}
 		S_ChannelSetup();
 	}
 

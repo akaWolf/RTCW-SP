@@ -969,7 +969,8 @@ void CL_Setenv_f( void ) {
 			strcat( buffer, " " );
 		}
 
-		Q_putenv( buffer );
+		// putenv() keeps the pointer it is given, so hand it a copy that outlives this call
+		Q_putenv( CopyString( buffer ) );
 	} else if ( argc == 2 ) {
 		char *env = getenv( Cmd_Argv( 1 ) );
 
@@ -2245,7 +2246,7 @@ void QDECL CL_RefPrintf( int print_level, const char *fmt, ... ) {
 	char msg[MAXPRINTMSG];
 
 	va_start( argptr,fmt );
-	vsprintf( msg,fmt,argptr );
+	vsnprintf( msg, sizeof( msg ),fmt,argptr );
 	va_end( argptr );
 
 	if ( print_level == PRINT_ALL ) {
@@ -3576,6 +3577,10 @@ void CL_AddToLimboChat( const char *str ) {
 
 	ls = NULL;
 	while ( *str ) {
+		// color codes don't count towards len, so bound the raw buffer too (room for 2 bytes + NUL)
+		if ( p >= cl.limboChatMsgs[0] + LIMBOCHAT_WIDTH * 3 - 2 ) {
+			break;
+		}
 		if ( len > LIMBOCHAT_WIDTH - 1 ) {
 #if 0
 			if ( ls ) {

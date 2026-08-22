@@ -33,7 +33,7 @@ If you have questions concerning this license or the applicable additional terms
 #include "../qcommon/qcommon.h"
 #include "snd_public.h"
 
-#define PAINTBUFFER_SIZE        4096                    // this is in samples
+#define PAINTBUFFER_SIZE        16384                   // this is in samples; ~10 frames worth at 48 kHz and low fps
 
 #define SND_CHUNK_SIZE          1024                    // samples
 #define SND_CHUNK_SIZE_FLOAT    ( SND_CHUNK_SIZE / 2 )      // floats

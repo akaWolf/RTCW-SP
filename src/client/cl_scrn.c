@@ -63,7 +63,27 @@ SCR_AdjustFrom640
 Adjusted for resolution and screen aspect ratio
 ================
 */
+cvar_t *scr_fixedAspect;
+
+static void SCR_AdjustFrom640Ex( float *x, float *y, float *w, float *h, qboolean allowStretch );
+
 void SCR_AdjustFrom640( float *x, float *y, float *w, float *h ) {
+	SCR_AdjustFrom640Ex( x, y, w, h, qtrue );
+}
+
+// movies are 4:3 content: never stretch them
+void SCR_AdjustFrom640KeepAspect( float *x, float *y, float *w, float *h ) {
+	SCR_AdjustFrom640Ex( x, y, w, h, qfalse );
+}
+
+/*
+================
+SCR_AdjustFrom640Ex
+
+allowStretch lets elements that span the whole 640x480 screen keep covering it
+================
+*/
+static void SCR_AdjustFrom640Ex( float *x, float *y, float *w, float *h, qboolean allowStretch ) {
 	float xscale;
 	float yscale;
 
@@ -77,6 +97,29 @@ void SCR_AdjustFrom640( float *x, float *y, float *w, float *h ) {
 	// scale for screen sizes
 	xscale = cls.glconfig.vidWidth / 640.0;
 	yscale = cls.glconfig.vidHeight / 480.0;
+
+	if ( scr_fixedAspect && scr_fixedAspect->integer ) {
+		float scale = xscale < yscale ? xscale : yscale;
+		float xbias = 0.5 * ( cls.glconfig.vidWidth - 640 * scale );
+		float ybias = 0.5 * ( cls.glconfig.vidHeight - 480 * scale );
+		qboolean fullX = allowStretch && x && w && *x <= 0 && *x + *w >= 640;
+		qboolean fullY = allowStretch && y && h && *y <= 0 && *y + *h >= 480;
+
+		if ( x ) {
+			*x = fullX ? *x * xscale : *x * scale + xbias;
+		}
+		if ( w ) {
+			*w *= fullX ? xscale : scale;
+		}
+		if ( y ) {
+			*y = fullY ? *y * yscale : *y * scale + ybias;
+		}
+		if ( h ) {
+			*h *= fullY ? yscale : scale;
+		}
+		return;
+	}
+
 	if ( x ) {
 		*x *= xscale;
 	}
@@ -424,6 +467,7 @@ void SCR_Init( void ) {
 	cl_graphheight = Cvar_Get( "graphheight", "32", CVAR_CHEAT );
 	cl_graphscale = Cvar_Get( "graphscale", "1", CVAR_CHEAT );
 	cl_graphshift = Cvar_Get( "graphshift", "0", CVAR_CHEAT );
+	scr_fixedAspect = Cvar_Get( "cg_fixedAspect", "1", CVAR_ARCHIVE | CVAR_LATCH );
 
 	scr_initialized = qtrue;
 }

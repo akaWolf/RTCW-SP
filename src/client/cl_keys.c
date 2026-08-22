@@ -194,7 +194,7 @@ keyname_t keynames_d[] =    //deutsch
 	{"EINGABETASTE", K_ENTER},
 	{"ESC", K_ESCAPE},
 	{"LEERTASTE", K_SPACE},
-	{"RÜCKTASTE", K_BACKSPACE},
+	{"Rï¿½CKTASTE", K_BACKSPACE},
 	{"PFEILT.AUF", K_UPARROW},
 	{"PFEILT.UNTEN", K_DOWNARROW},
 	{"PFEILT.LINKS", K_LEFTARROW},
@@ -447,9 +447,9 @@ keyname_t keynames_s[] =  //Spanish - Updated 11/5
 
 	{"ALT", K_ALT},
 	{"CTRL", K_CTRL},
-	{"MAYÚS", K_SHIFT},
+	{"MAYï¿½S", K_SHIFT},
 
-	{"BLOQ_MAYÚS", K_CAPSLOCK},
+	{"BLOQ_MAYï¿½S", K_CAPSLOCK},
 
 	{"F1", K_F1},
 	{"F2", K_F2},
@@ -466,16 +466,16 @@ keyname_t keynames_s[] =  //Spanish - Updated 11/5
 
 	{"INSERT", K_INS},
 	{"SUPR", K_DEL},
-	{"AV_PÁG", K_PGDN},
-	{"RE_PÁG", K_PGUP},
+	{"AV_Pï¿½G", K_PGDN},
+	{"RE_Pï¿½G", K_PGUP},
 	{"INICIO", K_HOME},
 	{"FIN", K_END},
 
-	{"RATÓN1", K_MOUSE1},
-	{"RATÓN2", K_MOUSE2},
-	{"RATÓN3", K_MOUSE3},
-	{"RATÓN4", K_MOUSE4},
-	{"RATÓN5", K_MOUSE5},
+	{"RATï¿½N1", K_MOUSE1},
+	{"RATï¿½N2", K_MOUSE2},
+	{"RATï¿½N3", K_MOUSE3},
+	{"RATï¿½N4", K_MOUSE4},
+	{"RATï¿½N5", K_MOUSE5},
 
 	{"RUEDA_HACIA_ARRIBA",   K_MWHEELUP },
 	{"RUEDA_HACIA_ABAJO",    K_MWHEELDOWN },
@@ -532,13 +532,13 @@ keyname_t keynames_s[] =  //Spanish - Updated 11/5
 
 	{"INICIO(NUM)",          K_KP_HOME },
 	{"ARRIBA(NUM)",      K_KP_UPARROW },
-	{"RE_PÁG(NUM)",          K_KP_PGUP },
+	{"RE_Pï¿½G(NUM)",          K_KP_PGUP },
 	{"IZQUIERDA(NUM)",   K_KP_LEFTARROW },
 	{"5(NUM)",           K_KP_5 },
 	{"DERECHA(NUM)", K_KP_RIGHTARROW },
 	{"FIN(NUM)",         K_KP_END },
 	{"ABAJO(NUM)",   K_KP_DOWNARROW },
-	{"AV_PÁG(NUM)",          K_KP_PGDN },
+	{"AV_Pï¿½G(NUM)",          K_KP_PGDN },
 	{"INTRO(NUM)",       K_KP_ENTER },
 	{"INS(NUM)",         K_KP_INS },
 	{"SUPR(NUM)",            K_KP_DEL },
@@ -567,7 +567,7 @@ keyname_t keynames_i[] =  //Italian
 	{"SPAZIO", K_SPACE},
 	{"BACKSPACE", K_BACKSPACE},
 	{"FRECCIASU", K_UPARROW},
-	{"FRECCIAGIÙ", K_DOWNARROW},
+	{"FRECCIAGIï¿½", K_DOWNARROW},
 	{"FRECCIASX", K_LEFTARROW},
 	{"FRECCIADX", K_RIGHTARROW},
 
@@ -592,7 +592,7 @@ keyname_t keynames_i[] =  //Italian
 
 	{"INS", K_INS},
 	{"CANC", K_DEL},
-	{"PAGGIÙ", K_PGDN},
+	{"PAGGIï¿½", K_PGDN},
 	{"PAGGSU", K_PGUP},
 	{"HOME", K_HOME},
 	{"FINE", K_END},
@@ -604,7 +604,7 @@ keyname_t keynames_i[] =  //Italian
 	{"MOUSE5", K_MOUSE5},
 
 	{"ROTELLASU",    K_MWHEELUP },
-	{"ROTELLAGIÙ",   K_MWHEELDOWN },
+	{"ROTELLAGIï¿½",   K_MWHEELDOWN },
 
 	{"JOY1", K_JOY1},
 	{"JOY2", K_JOY2},
@@ -663,8 +663,8 @@ keyname_t keynames_i[] =  //Italian
 	{"TN_5",         K_KP_5 },
 	{"TN_FRECCIA_DX",    K_KP_RIGHTARROW },
 	{"TN_FINE",          K_KP_END },
-	{"TN_FRECCIAGIÙ",    K_KP_DOWNARROW },
-	{"TN_PAGGIÙ",            K_KP_PGDN },
+	{"TN_FRECCIAGIï¿½",    K_KP_DOWNARROW },
+	{"TN_PAGGIï¿½",            K_KP_PGDN },
 	{"TN_INVIO",     K_KP_ENTER },
 	{"TN_INS",           K_KP_INS },
 	{"TN_CANC",          K_KP_DEL },
@@ -677,7 +677,7 @@ keyname_t keynames_i[] =  //Italian
 
 	{"PAUSA", K_PAUSE},
 
-	{"ò", ';'},   // because a raw semicolon seperates commands
+	{"ï¿½", ';'},   // because a raw semicolon seperates commands
 
 	{"COMMAND", K_COMMAND},  //mac
 
@@ -1030,7 +1030,7 @@ static void keyConcatArgs( void ) {
 }
 
 static void ConcatRemaining( const char *src, const char *start ) {
-	char *str;
+	const char *str;
 
 	str = strstr( src, start );
 	if ( !str ) {
@@ -1621,7 +1621,43 @@ void Key_Bindlist_f( void ) {
 CL_InitKeyCommands
 ===================
 */
+/*
+============
+Key_Event_f
+
+"keyevent <key>" presses and releases a key from the console; meant for
+scripted tests (e.g. leaving the briefing screen), so developer mode only
+============
+*/
+void Sys_QueEvent( int time, sysEventType_t type, int value, int value2, int ptrLength, void *ptr );
+
+static void Key_Event_f( void ) {
+	int key;
+
+	if ( !com_developer->integer ) {
+		Com_Printf( "keyevent needs developer 1\n" );
+		return;
+	}
+	if ( Cmd_Argc() != 2 && Cmd_Argc() != 4 ) {
+		Com_Printf( "keyevent <key> [x y]: press and release a key, optionally after moving the UI cursor to x y (640x480 space)\n" );
+		return;
+	}
+	key = Key_StringToKeynum( Cmd_Argv( 1 ) );
+	if ( key == -1 ) {
+		Com_Printf( "\"%s\" isn't a valid key\n", Cmd_Argv( 1 ) );
+		return;
+	}
+	if ( Cmd_Argc() == 4 ) {
+		// the UI cursor only moves by deltas and clamps to the screen, so park it in the corner first
+		Sys_QueEvent( 0, SE_MOUSE, -10000, -10000, 0, NULL );
+		Sys_QueEvent( 0, SE_MOUSE, atoi( Cmd_Argv( 2 ) ), atoi( Cmd_Argv( 3 ) ), 0, NULL );
+	}
+	Sys_QueEvent( 0, SE_KEY, key, qtrue, 0, NULL );
+	Sys_QueEvent( 0, SE_KEY, key, qfalse, 0, NULL );
+}
+
 void CL_InitKeyCommands( void ) {
+	Cmd_AddCommand( "keyevent", Key_Event_f );
 	// register our functions
 	Cmd_AddCommand( "bind",Key_Bind_f );
 	Cmd_AddCommand( "unbind",Key_Unbind_f );

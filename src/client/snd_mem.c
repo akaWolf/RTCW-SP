@@ -247,6 +247,11 @@ static wavinfo_t GetWavinfo( char *name, byte *wav, int wavlength ) {
 		Com_Printf( "Microsoft PCM format only\n" );
 		return info;
 	}
+	if ( info.width < 1 || info.width > 2 || info.channels < 1 || info.channels > 2 ) {
+		Com_Printf( "%s: unsupported sample size or channel count\n", name );
+		info.width = 0;
+		return info;
+	}
 
 
 // find data chunk
@@ -259,6 +264,12 @@ static wavinfo_t GetWavinfo( char *name, byte *wav, int wavlength ) {
 	data_p += 4;
 	info.samples = GetLittleLong() / info.width;
 	info.dataofs = data_p - wav;
+
+	// don't trust the chunk length past the end of the file
+	if ( info.samples < 0 || info.samples > ( wavlength - info.dataofs ) / info.width ) {
+		Com_Printf( "%s: data chunk is longer than the file, truncating\n", name );
+		info.samples = ( wavlength - info.dataofs ) / info.width;
+	}
 
 	return info;
 }

@@ -1090,6 +1090,15 @@ static void readQuadInfo( byte *qData ) {
 	cinTable[currentHandle].maxsize  = qData[4] + qData[5] * 256;
 	cinTable[currentHandle].minsize  = qData[6] + qData[7] * 256;
 
+	if ( cinTable[currentHandle].xsize < 1 || cinTable[currentHandle].xsize > DEFAULT_CIN_WIDTH
+		 || cinTable[currentHandle].ysize < 1 || cinTable[currentHandle].ysize > DEFAULT_CIN_HEIGHT ) {
+		Com_Printf( S_COLOR_YELLOW "WARNING: cinematic %s has an unsupported size %ix%i\n",
+					cinTable[currentHandle].fileName, cinTable[currentHandle].xsize, cinTable[currentHandle].ysize );
+		cinTable[currentHandle].xsize = DEFAULT_CIN_WIDTH;
+		cinTable[currentHandle].ysize = DEFAULT_CIN_HEIGHT;
+		cinTable[currentHandle].status = FMV_EOF;
+	}
+
 	cinTable[currentHandle].CIN_HEIGHT = cinTable[currentHandle].ysize;
 	cinTable[currentHandle].CIN_WIDTH  = cinTable[currentHandle].xsize;
 
@@ -1709,7 +1718,7 @@ void CIN_DrawCinematic( int handle ) {
 	w = cinTable[handle].width;
 	h = cinTable[handle].height;
 	buf = cinTable[handle].buf;
-	SCR_AdjustFrom640( &x, &y, &w, &h );
+	SCR_AdjustFrom640KeepAspect( &x, &y, &w, &h );
 
 
 	if ( cinTable[handle].letterBox ) {
@@ -1723,8 +1732,9 @@ void CIN_DrawCinematic( int handle ) {
 //		re.DrawStretchPic( 0, 0, SCREEN_WIDTH, LETTERBOX_OFFSET, 0, 0, 0, 0, cls.whiteShader );
 //		re.DrawStretchPic( 0, SCREEN_HEIGHT-LETTERBOX_OFFSET, SCREEN_WIDTH, LETTERBOX_OFFSET, 0, 0, 0, 0, cls.whiteShader );
 		//----(SA)	adjust for 640x480
-		re.DrawStretchPic( 0, 0, w, barheight, 0, 0, 0, 0, cls.whiteShader );
-		re.DrawStretchPic( 0, vh - barheight - 1, w, barheight + 1, 0, 0, 0, 0, cls.whiteShader );
+		// span the whole window: with cg_fixedAspect the movie is narrower than the screen (w < vidWidth)
+		re.DrawStretchPic( 0, 0, cls.glconfig.vidWidth, barheight, 0, 0, 0, 0, cls.whiteShader );
+		re.DrawStretchPic( 0, vh - barheight - 1, cls.glconfig.vidWidth, barheight + 1, 0, 0, 0, 0, cls.whiteShader );
 	}
 
 	if ( cinTable[handle].dirty && ( cinTable[handle].CIN_WIDTH != cinTable[handle].drawX || cinTable[handle].CIN_HEIGHT != cinTable[handle].drawY ) ) {
@@ -1834,6 +1844,25 @@ void CL_PlayCinematic_f( void ) {
 
 
 void SCR_DrawCinematic( void ) {
+	if ( scr_fixedAspect && scr_fixedAspect->integer ) {
+		// black bars around the centered 4:3 movie. They must not overlap the movie:
+		// RE_StretchRaw draws immediately while DrawStretchPic is queued and would
+		// be painted over the movie at the end of the frame
+		float x = 0, y = 0, w = 640, h = 480;
+		float vw = cls.glconfig.vidWidth, vh = cls.glconfig.vidHeight;
+
+		SCR_AdjustFrom640KeepAspect( &x, &y, &w, &h );
+		re.SetColor( colorBlack );
+		if ( x > 0 ) {
+			re.DrawStretchPic( 0, 0, x, vh, 0, 0, 0, 0, cls.whiteShader );
+			re.DrawStretchPic( x + w, 0, vw - ( x + w ), vh, 0, 0, 0, 0, cls.whiteShader );
+		}
+		if ( y > 0 ) {
+			re.DrawStretchPic( 0, 0, vw, y, 0, 0, 0, 0, cls.whiteShader );
+			re.DrawStretchPic( 0, y + h, vw, vh - ( y + h ), 0, 0, 0, 0, cls.whiteShader );
+		}
+		re.SetColor( NULL );
+	}
 	if ( CL_handle >= 0 && CL_handle < MAX_VIDEO_HANDLES ) {
 		CIN_DrawCinematic( CL_handle );
 	}

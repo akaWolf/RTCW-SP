@@ -233,7 +233,15 @@ qboolean SNDDMA_Init(void)
 	desired.freq = (int) s_sdlSpeed->value;
 	if (!desired.freq)
 	{
-		desired.freq = 22050;
+		// follow the sound quality setting from the menu
+		switch (Cvar_VariableIntegerValue("s_khz"))
+		{
+		case 11: desired.freq = 11025; break;
+		case 22: desired.freq = 22050; break;
+		case 48: desired.freq = 48000; break;
+		case 44:
+		default: desired.freq = 44100; break;
+		}
 	}
 	desired.format = ((tmp == 16) ? AUDIO_S16SYS : AUDIO_U8);
 
