@@ -706,5 +706,6 @@ void R_AddWorldSurfaces( void ) {
 	if ( tr.refdef.num_dlights > 32 ) {
 		tr.refdef.num_dlights = 32 ;
 	}
-	R_RecursiveWorldNode( tr.world->nodes, 15, ( 1 << tr.refdef.num_dlights ) - 1 );
+	// ( 1 << 32 ) is undefined, so a full house of 32 dlights needs a special case
+	R_RecursiveWorldNode( tr.world->nodes, 15, tr.refdef.num_dlights >= 32 ? -1 : ( 1 << tr.refdef.num_dlights ) - 1 );
 }

@@ -1559,10 +1559,13 @@ void R_AddDrawSurf( surfaceType_t *surface, shader_t *shader,
 	// instead of checking for overflow, we just mask the index
 	// so it wraps around
 	index = tr.refdef.numDrawSurfs & DRAWSURF_MASK;
+	if ( tr.refdef.numDrawSurfs == MAX_DRAWSURFS ) {
+		ri.Printf( PRINT_DEVELOPER, "WARNING: MAX_DRAWSURFS exceeded, surfaces are being dropped\n" );
+	}
 	// the sort data is packed into a single 32 bit value so it can be
 	// compared quickly during the qsorting process
 // GR - add tesselation flag to the sort
-	tr.refdef.drawSurfs[index].sort = ( shader->sortedIndex << QSORT_SHADERNUM_SHIFT )
+	tr.refdef.drawSurfs[index].sort = ( (unsigned)shader->sortedIndex << QSORT_SHADERNUM_SHIFT )
 									  | ( atiTess << QSORT_ATI_TESS_SHIFT )
 									  | tr.shiftedEntityNum | ( fogIndex << QSORT_FOGNUM_SHIFT ) | (int)dlightMap;
 	tr.refdef.drawSurfs[index].surface = surface;

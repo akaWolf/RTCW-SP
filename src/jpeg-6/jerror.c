@@ -69,7 +69,7 @@ error_exit( j_common_ptr cinfo ) {
 	/* Let the memory manager delete any temp files before we die */
 	jpeg_destroy( cinfo );
 
-	ri.Error( ERR_FATAL, "%s\n", buffer );
+	ri.Error( ERR_DROP, "%s\n", buffer );
 }
 
 

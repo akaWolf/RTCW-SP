@@ -617,7 +617,7 @@ void RB_ZombieFXAddNewHit( int entityNum, const vec3_t hitPos, const vec3_t hitD
 	}
 
 	if ( entityNum >= MAX_SP_CLIENTS ) {
-		Com_Printf( "RB_ZombieFXAddNewHit: entityNum (%i) outside allowable range (%i)\n", entityNum, MAX_SP_CLIENTS );
+		ri.Printf( PRINT_WARNING, "RB_ZombieFXAddNewHit: entityNum (%i) outside allowable range (%i)\n", entityNum, MAX_SP_CLIENTS );
 		return;
 	}
 	if ( zombieFleshHitVerts[entityNum][part].numHits + zombieFleshHitVerts[entityNum][part].numNewHits >= ZOMBIEFX_MAX_HITS ) {
@@ -814,7 +814,7 @@ void RB_ZombieFX( int part, drawSurf_t *drawSurf, int oldNumVerts, int oldNumInd
 	} else if ( *drawSurf->surface == SF_MDC ) {
 		surfName = ( (mdcSurface_t *)drawSurf->surface )->name;
 	} else {
-		Com_Printf( "RB_ZombieFX: unknown surface type\n" );
+		ri.Printf( PRINT_WARNING, "RB_ZombieFX: unknown surface type\n" );
 		return;
 	}
 
@@ -834,7 +834,7 @@ void RB_ZombieFX( int part, drawSurf_t *drawSurf, int oldNumVerts, int oldNumInd
 	numSurfVerts = tess.numVertexes - oldNumVerts;
 
 	if ( numSurfVerts > ZOMBIEFX_MAX_VERTS ) {
-		Com_Printf( "RB_ZombieFX: exceeded ZOMBIEFX_MAX_VERTS\n" );
+		ri.Printf( PRINT_WARNING, "RB_ZombieFX: exceeded ZOMBIEFX_MAX_VERTS\n" );
 		return;
 	}
 
@@ -1167,7 +1167,6 @@ const void *RB_StretchRaw( const void *data ) {
 	}
 
 	RB_SetGL2D();
-
 	qglColor3f( tr.identityLight, tr.identityLight, tr.identityLight );
 
 	qglBegin( GL_QUADS );
@@ -1510,20 +1509,37 @@ const void  *RB_LoadTex( const void *data ) {
 }
 
 // Delete textures from the front end via SMP
+/*
+=============
+R_CleanMedia
+
+Called between maps (save) and before the window is destroyed (!save)
+=============
+*/
+void R_CleanMedia( qboolean save ) {
+	R_PurgeShaders( 9999999 );
+	R_PurgeBackupImages( 9999999 );
+	R_PurgeModels( 9999999 );
+
+	if ( save && r_cache->integer ) {
+		R_BackupModels();
+		R_BackupShaders();
+		if ( r_cacheShaders->integer ) {
+			R_BackupImages();
+		} else {
+			// nothing keeps the old textures alive, so release them explicitly
+			R_DeleteTextures();
+		}
+	} else {
+		R_DeleteTextures();
+	}
+}
+
 const void  *RB_Clean( const void *data, qboolean save ) {
 	const swapBuffersCommand_t  *cmd;
 
 	cmd = (const swapBuffersCommand_t *)data;
-	R_PurgeShaders( 9999999 );
-	R_PurgeBackupImages( 9999999 );
-	R_PurgeModels( 9999999 );
-	if ( save && r_cache->integer ){
-		R_BackupModels();
-		R_BackupShaders();
-		R_BackupImages();
-	} else {
-		R_DeleteTextures();
-	}
+	R_CleanMedia( save );
 	return (const void *)( cmd + 1 );
 }
 
@@ -1546,6 +1562,47 @@ RB_SwapBuffers
 
 =============
 */
+/*
+=============
+RB_OverbrightPass
+
+Without a hardware gamma ramp the frame is rendered at half intensity
+(tr.identityLight) and doubled here, once per overbright bit, exactly like
+the ramp would have done it: out = dst * 1 + 1 * dst
+=============
+*/
+static qboolean overbrightDone;     // once per frame, a screenshot may need it before the swap
+
+void RB_OverbrightPass( void ) {
+	int i;
+
+	if ( overbrightDone || !tr.overbrightBits || glConfig.deviceSupportsGamma ) {
+		return;
+	}
+	overbrightDone = qtrue;
+
+	RB_SetGL2D();
+	if ( qglActiveTextureARB ) {
+		GL_SelectTexture( 0 );
+	}
+	GL_Bind( tr.whiteImage );
+	GL_State( GLS_DEPTHTEST_DISABLE | GLS_SRCBLEND_DST_COLOR | GLS_DSTBLEND_ONE );
+	qglColor4f( 1, 1, 1, 1 );
+
+	for ( i = 0; i < tr.overbrightBits; i++ ) {
+		qglBegin( GL_QUADS );
+		qglTexCoord2f( 0, 0 );
+		qglVertex2f( 0, 0 );
+		qglTexCoord2f( 1, 0 );
+		qglVertex2f( glConfig.vidWidth, 0 );
+		qglTexCoord2f( 1, 1 );
+		qglVertex2f( glConfig.vidWidth, glConfig.vidHeight );
+		qglTexCoord2f( 0, 1 );
+		qglVertex2f( 0, glConfig.vidHeight );
+		qglEnd();
+	}
+}
+
 const void  *RB_SwapBuffers( const void *data ) {
 	const swapBuffersCommand_t  *cmd;
 
@@ -1553,6 +1610,9 @@ const void  *RB_SwapBuffers( const void *data ) {
 	if ( tess.numIndexes ) {
 		RB_EndSurface();
 	}
+
+	RB_OverbrightPass();
+	overbrightDone = qfalse;    // the next frame starts fresh
 
 	// texture swapping test
 	if ( r_showImages->integer ) {
@@ -1619,6 +1679,9 @@ void RB_ExecuteRenderCommands( const void *data ) {
 			break;
 		case RC_DRAW_BUFFER:
 			data = RB_DrawBuffer( data );
+			break;
+		case RC_SCREENSHOT:
+			data = RB_TakeScreenshotCmd( data );
 			break;
 		case RC_SWAP_BUFFERS:
 			data = RB_SwapBuffers( data );

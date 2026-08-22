@@ -589,7 +589,7 @@ int R_MarkFragments( int orientation, const vec3_t *points, const vec3_t project
 		}
 		// bestCenter is now the real center
 		VectorCopy( bestCenter, center );
-Com_Printf("bestnormal: %1.1f %1.1f %1.1f \n", bestnormal[0], bestnormal[1], bestnormal[2] );
+		ri.Printf( PRINT_DEVELOPER, "bestnormal: %1.1f %1.1f %1.1f \n", bestnormal[0], bestnormal[1], bestnormal[2] );
 */
 		VectorNegate( bestnormal, bestnormal );
 	}

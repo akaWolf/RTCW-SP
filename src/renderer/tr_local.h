@@ -52,7 +52,7 @@ long myftol( float f );
 // parallel on a dual cpu machine
 #define SMP_FRAMES      2
 
-#define MAX_SHADERS             2048
+#define MAX_SHADERS             4096
 
 #define MAX_SHADER_STATES 2048
 #define MAX_STATES_PER_SHADER 32
@@ -819,7 +819,7 @@ void        R_Modellist_f( void );
 //====================================================
 extern refimport_t ri;
 
-#define MAX_DRAWIMAGES          2048
+#define MAX_DRAWIMAGES          4096
 #define MAX_LIGHTMAPS           256
 #define MAX_SKINS               1024
 
@@ -850,24 +850,34 @@ old:
 
 new:
 
-22 - 31	: sorted shader index
-11 - 21	: entity index
+20 - 31	: sorted shader index (12 bits, MAX_SHADERS)
+10 - 19	: entity index (10 bits, MAX_ENTITIES)
+8		: ATI tessellation flag
 2 - 6	: fog index
-removed	: used to be clipped flag
 0 - 1	: dlightmap index
 
 */
-#define QSORT_SHADERNUM_SHIFT   22
-#define QSORT_ENTITYNUM_SHIFT   11
+#define QSORT_SHADERNUM_SHIFT   20
+#define QSORT_ENTITYNUM_SHIFT   10
 #define QSORT_FOGNUM_SHIFT      2
 
 // GR - tessellation flag in bit 8
 #define QSORT_ATI_TESS_SHIFT    8
+
+#if MAX_SHADERS > ( 1 << ( 32 - QSORT_SHADERNUM_SHIFT ) )
+#error MAX_SHADERS does not fit into the drawSurf sort key
+#endif
+#if MAX_ENTITIES >= ( 1 << ( QSORT_SHADERNUM_SHIFT - QSORT_ENTITYNUM_SHIFT ) )
+#error MAX_ENTITIES does not fit into the drawSurf sort key
+#endif
 // GR - TruForm flags
 #define ATI_TESS_TRUFORM    1
 #define ATI_TESS_NONE       0
 
 extern int gl_filter_min, gl_filter_max;
+extern float glMaxAnisotropy;      // 0 when GL_EXT_texture_filter_anisotropic is unavailable or disabled
+void GL_SetAnisotropy( void );
+void R_CleanMedia( qboolean save );
 
 /*
 ** performanceCounters_t
@@ -1120,6 +1130,7 @@ extern cvar_t   *r_ext_gamma_control;
 extern cvar_t   *r_ext_texenv_op;
 extern cvar_t   *r_ext_multitexture;
 extern cvar_t   *r_ext_compiled_vertex_array;
+extern cvar_t   *r_ext_max_anisotropy;
 extern cvar_t   *r_ext_texture_env_add;
 //----(SA)	added
 extern cvar_t   *r_ext_ATI_pntriangles;
@@ -1339,6 +1350,9 @@ void        R_GammaCorrect( byte *buffer, int bufSize );
 void    R_ImageList_f( void );
 void    R_SkinList_f( void );
 void    R_ScreenShot_f( void );
+const void *RB_TakeScreenshotCmd( const void *data );
+void R_IssuePendingScreenshot( void );
+void RB_OverbrightPass( void );
 void    R_ScreenShotJPEG_f( void );
 
 void    R_InitFogTable( void );
@@ -1701,6 +1715,16 @@ typedef struct {
 
 typedef struct {
 	int commandId;
+	int x;
+	int y;
+	int width;
+	int height;
+	char fileName[MAX_OSPATH];
+	qboolean jpeg;
+} screenshotCommand_t;
+
+typedef struct {
+	int commandId;
 	int buffer;
 } endFrameCommand_t;
 
@@ -1738,6 +1762,7 @@ typedef enum {
 	RC_CLEAN0,
 	RC_CLEAN1,
 	RC_INIT,
+	RC_SCREENSHOT,
 	RC_SWAP_BUFFERS
 } renderCommand_t;
 
@@ -1749,8 +1774,8 @@ typedef enum {
 // Ridah, these aren't enough for cool effects
 //#define	MAX_POLYS		256
 //#define	MAX_POLYVERTS	1024
-#define MAX_POLYS       4096
-#define MAX_POLYVERTS   8192
+#define MAX_POLYS       8192
+#define MAX_POLYVERTS   32768
 // done.
 
 // all of the information needed by the back end must be

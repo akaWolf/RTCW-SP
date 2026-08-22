@@ -162,6 +162,10 @@ static void R_LoadLightmaps( lump_t *l ) {
 
 	// create all the lightmaps
 	tr.numLightmaps = len / ( LIGHTMAP_SIZE * LIGHTMAP_SIZE * 3 );
+	if ( tr.numLightmaps > MAX_LIGHTMAPS ) {
+		ri.Printf( PRINT_WARNING, "WARNING: number of lightmaps > MAX_LIGHTMAPS (%i > %i), the rest will be vertex lit\n", tr.numLightmaps, MAX_LIGHTMAPS );
+		tr.numLightmaps = MAX_LIGHTMAPS;
+	}
 	if ( tr.numLightmaps == 1 ) {
 		//FIXME: HACK: maps with only one lightmap turn up fullbright for some reason.
 		//this avoids this, but isn't the correct solution.
@@ -408,6 +412,9 @@ static void ParseFace( dsurface_t *ds, drawVert_t *verts, msurface_t *surf, int 
 	indexes += LittleLong( ds->firstIndex );
 	for ( i = 0 ; i < numIndexes ; i++ ) {
 		( ( int * )( (byte *)cv + cv->ofsIndices ) )[i] = LittleLong( indexes[ i ] );
+		if ( ( ( int * )( (byte *)cv + cv->ofsIndices ) )[i] < 0 || ( ( int * )( (byte *)cv + cv->ofsIndices ) )[i] >= numPoints ) {
+			ri.Error( ERR_DROP, "Bad index in face surface" );
+		}
 	}
 
 	// take the plane information from the lightmap vector
@@ -457,6 +464,10 @@ static void ParseMesh( dsurface_t *ds, drawVert_t *verts, msurface_t *surf ) {
 
 	width = LittleLong( ds->patchWidth );
 	height = LittleLong( ds->patchHeight );
+
+	if ( width < 0 || width > MAX_PATCH_SIZE || height < 0 || height > MAX_PATCH_SIZE ) {
+		ri.Error( ERR_DROP, "ParseMesh: bad size" );
+	}
 
 	verts += LittleLong( ds->firstVert );
 	numPoints = width * height;
@@ -907,6 +918,9 @@ int R_StitchPatches( int grid1num, int grid2num ) {
 					} else { row = 0;}
 					grid2 = R_GridInsertColumn( grid2, l + 1, row,
 												grid1->verts[k + 1 + offset1].xyz, grid1->widthLodError[k + 1] );
+					if ( !grid2 ) {
+						return qfalse;      // the grid is as big as it can get, can't stitch
+					}
 					grid2->lodStitched = qfalse;
 					s_worldData.surfaces[grid2num].data = (void *) grid2;
 					return qtrue;
@@ -963,6 +977,9 @@ int R_StitchPatches( int grid1num, int grid2num ) {
 					} else { column = 0;}
 					grid2 = R_GridInsertRow( grid2, l + 1, column,
 											 grid1->verts[k + 1 + offset1].xyz, grid1->widthLodError[k + 1] );
+					if ( !grid2 ) {
+						return qfalse;      // the grid is as big as it can get, can't stitch
+					}
 					grid2->lodStitched = qfalse;
 					s_worldData.surfaces[grid2num].data = (void *) grid2;
 					return qtrue;
@@ -1030,6 +1047,9 @@ int R_StitchPatches( int grid1num, int grid2num ) {
 					} else { row = 0;}
 					grid2 = R_GridInsertColumn( grid2, l + 1, row,
 												grid1->verts[grid1->width * ( k + 1 ) + offset1].xyz, grid1->heightLodError[k + 1] );
+					if ( !grid2 ) {
+						return qfalse;      // the grid is as big as it can get, can't stitch
+					}
 					grid2->lodStitched = qfalse;
 					s_worldData.surfaces[grid2num].data = (void *) grid2;
 					return qtrue;
@@ -1086,6 +1106,9 @@ int R_StitchPatches( int grid1num, int grid2num ) {
 					} else { column = 0;}
 					grid2 = R_GridInsertRow( grid2, l + 1, column,
 											 grid1->verts[grid1->width * ( k + 1 ) + offset1].xyz, grid1->heightLodError[k + 1] );
+					if ( !grid2 ) {
+						return qfalse;      // the grid is as big as it can get, can't stitch
+					}
 					grid2->lodStitched = qfalse;
 					s_worldData.surfaces[grid2num].data = (void *) grid2;
 					return qtrue;
@@ -1154,6 +1177,9 @@ int R_StitchPatches( int grid1num, int grid2num ) {
 					} else { row = 0;}
 					grid2 = R_GridInsertColumn( grid2, l + 1, row,
 												grid1->verts[k - 1 + offset1].xyz, grid1->widthLodError[k + 1] );
+					if ( !grid2 ) {
+						return qfalse;      // the grid is as big as it can get, can't stitch
+					}
 					grid2->lodStitched = qfalse;
 					s_worldData.surfaces[grid2num].data = (void *) grid2;
 					return qtrue;
@@ -1212,6 +1238,9 @@ int R_StitchPatches( int grid1num, int grid2num ) {
 											 grid1->verts[k - 1 + offset1].xyz, grid1->widthLodError[k + 1] );
 					if ( !grid2 ) {
 						break;
+					}
+					if ( !grid2 ) {
+						return qfalse;      // the grid is as big as it can get, can't stitch
 					}
 					grid2->lodStitched = qfalse;
 					s_worldData.surfaces[grid2num].data = (void *) grid2;
@@ -1280,6 +1309,9 @@ int R_StitchPatches( int grid1num, int grid2num ) {
 					} else { row = 0;}
 					grid2 = R_GridInsertColumn( grid2, l + 1, row,
 												grid1->verts[grid1->width * ( k - 1 ) + offset1].xyz, grid1->heightLodError[k + 1] );
+					if ( !grid2 ) {
+						return qfalse;      // the grid is as big as it can get, can't stitch
+					}
 					grid2->lodStitched = qfalse;
 					s_worldData.surfaces[grid2num].data = (void *) grid2;
 					return qtrue;
@@ -1336,6 +1368,9 @@ int R_StitchPatches( int grid1num, int grid2num ) {
 					} else { column = 0;}
 					grid2 = R_GridInsertRow( grid2, l + 1, column,
 											 grid1->verts[grid1->width * ( k - 1 ) + offset1].xyz, grid1->heightLodError[k + 1] );
+					if ( !grid2 ) {
+						return qfalse;      // the grid is as big as it can get, can't stitch
+					}
 					grid2->lodStitched = qfalse;
 					s_worldData.surfaces[grid2num].data = (void *) grid2;
 					return qtrue;
@@ -1474,6 +1509,7 @@ static void R_LoadSurfaces( lump_t *surfs, lump_t *verts, lump_t *indexLump ) {
 	drawVert_t  *dv;
 	int         *indexes;
 	int count;
+	int numDrawVerts, numDrawIndexes;
 	int numFaces, numMeshes, numTriSurfs, numFlares;
 	int i;
 
@@ -1508,7 +1544,32 @@ static void R_LoadSurfaces( lump_t *surfs, lump_t *verts, lump_t *indexLump ) {
 	// as we go
 	R_InitSurfMemory();
 
+	numDrawVerts = verts->filelen / sizeof( *dv );
+	numDrawIndexes = indexLump->filelen / sizeof( *indexes );
+
 	for ( i = 0 ; i < count ; i++, in++, out++ ) {
+		// make sure the surface stays inside the vertex and index lumps
+		{
+			int surfType = LittleLong( in->surfaceType );
+			int firstVert = LittleLong( in->firstVert );
+			int numVerts = LittleLong( in->numVerts );
+			int firstIndex = LittleLong( in->firstIndex );
+			int numIndexes = LittleLong( in->numIndexes );
+
+			if ( surfType == MST_PATCH ) {
+				numVerts = LittleLong( in->patchWidth ) * LittleLong( in->patchHeight );
+				numIndexes = 0;
+			} else if ( surfType == MST_FLARE ) {
+				numVerts = 0;
+				numIndexes = 0;
+			}
+			if ( firstVert < 0 || numVerts < 0 || firstVert + numVerts > numDrawVerts ) {
+				ri.Error( ERR_DROP, "R_LoadSurfaces: surface %i has a bad vertex range (%i + %i of %i)", i, firstVert, numVerts, numDrawVerts );
+			}
+			if ( firstIndex < 0 || numIndexes < 0 || firstIndex + numIndexes > numDrawIndexes ) {
+				ri.Error( ERR_DROP, "R_LoadSurfaces: surface %i has a bad index range (%i + %i of %i)", i, firstIndex, numIndexes, numDrawIndexes );
+			}
+		}
 		switch ( LittleLong( in->surfaceType ) ) {
 		case MST_PATCH:
 			ParseMesh( in, dv, out );
@@ -1640,6 +1701,9 @@ static void R_LoadNodesAndLeafs( lump_t *nodeLump, lump_t *leafLump ) {
 		}
 
 		p = LittleLong( in->planeNum );
+		if ( p < 0 || p >= s_worldData.numplanes ) {
+			ri.Error( ERR_DROP, "R_LoadNodesAndLeafs: bad plane %i in node %i", p, i );
+		}
 		out->plane = s_worldData.planes + p;
 
 		out->contents = CONTENTS_NODE;  // differentiate from leafs
@@ -1648,8 +1712,14 @@ static void R_LoadNodesAndLeafs( lump_t *nodeLump, lump_t *leafLump ) {
 		{
 			p = LittleLong( in->children[j] );
 			if ( p >= 0 ) {
+				if ( p >= numNodes ) {
+					ri.Error( ERR_DROP, "R_LoadNodesAndLeafs: bad child node %i in node %i", p, i );
+				}
 				out->children[j] = s_worldData.nodes + p;
 			} else {
+				if ( -1 - p >= numLeafs ) {
+					ri.Error( ERR_DROP, "R_LoadNodesAndLeafs: bad child leaf %i in node %i", -1 - p, i );
+				}
 				out->children[j] = s_worldData.nodes + numNodes + ( -1 - p );
 			}
 		}
@@ -1675,6 +1745,13 @@ static void R_LoadNodesAndLeafs( lump_t *nodeLump, lump_t *leafLump ) {
 		out->firstmarksurface = s_worldData.marksurfaces +
 								LittleLong( inLeaf->firstLeafSurface );
 		out->nummarksurfaces = LittleLong( inLeaf->numLeafSurfaces );
+		if ( LittleLong( inLeaf->firstLeafSurface ) < 0 || out->nummarksurfaces < 0
+			 || LittleLong( inLeaf->firstLeafSurface ) + out->nummarksurfaces > s_worldData.nummarksurfaces ) {
+			ri.Error( ERR_DROP, "R_LoadNodesAndLeafs: bad marksurface range in leaf %i", i );
+		}
+		if ( out->area < -1 || out->area >= MAX_MAP_AREAS ) {
+			ri.Error( ERR_DROP, "R_LoadNodesAndLeafs: bad area %i in leaf %i", out->area, i );
+		}
 	}
 
 	// chain decendants
@@ -1734,6 +1811,9 @@ static void R_LoadMarksurfaces( lump_t *l ) {
 	for ( i = 0 ; i < count ; i++ )
 	{
 		j = LittleLong( in[i] );
+		if ( j < 0 || j >= s_worldData.numsurfaces ) {
+			ri.Error( ERR_DROP, "R_LoadMarksurfaces: bad surface %i in marksurface %i", j, i );
+		}
 		out[i] = s_worldData.surfaces + j;
 	}
 }

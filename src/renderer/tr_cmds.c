@@ -220,6 +220,11 @@ image_t *R_CreateImage( const char *name, const byte *pic, int width, int height
 				qboolean mipmap, qboolean allowPicmip, int glWrapClampMode ) {
 	createImageCommand_t    *cmd;
 
+	// without a render thread there is nothing to hand the work off to
+	if ( !glConfig.smpActive ) {
+		return R_CreateImageExt( name, pic, width, height, mipmap, allowPicmip, qfalse, glWrapClampMode );
+	}
+
 	cmd = R_GetCommandBuffer( sizeof( *cmd ) );
 	if ( !cmd )
 		return NULL;
@@ -258,6 +263,12 @@ void R_PushInit( void ) {
 
 void RE_PreShutdown( qboolean destroyWindow ) {
 	swapBuffersCommand_t    *cmd;
+
+	// without a render thread there is nothing to hand the work off to
+	if ( !glConfig.smpActive ) {
+		R_CleanMedia( !destroyWindow );
+		return;
+	}
 
 	cmd = R_GetCommandBuffer( sizeof( *cmd ) );
 	if ( !cmd )
@@ -483,10 +494,11 @@ void RE_BeginFrame( stereoFrame_t stereoFrame ) {
 	//
 	// texturemode stuff
 	//
-	if ( r_textureMode->modified ) {
+	if ( r_textureMode->modified || r_ext_max_anisotropy->modified ) {
 		R_SyncRenderThread();
 		GL_TextureMode( r_textureMode->string );
 		r_textureMode->modified = qfalse;
+		r_ext_max_anisotropy->modified = qfalse;
 	}
 
 	//
@@ -626,6 +638,9 @@ void RE_EndFrame( int *frontEndMsec, int *backEndMsec ) {
 	if ( !tr.registered ) {
 		return;
 	}
+	// a screenshot requested this frame must see the finished frame
+	R_IssuePendingScreenshot();
+
 	cmd = R_GetCommandBuffer( sizeof( *cmd ) );
 	if ( !cmd ) {
 		return;

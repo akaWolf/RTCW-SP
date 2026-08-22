@@ -31,6 +31,10 @@ If you have questions concerning this license or the applicable additional terms
 
 #include "../cgame/tr_types.h"
 
+#ifndef Q_NORETURN
+#define Q_NORETURN
+#endif
+
 #define REF_API_VERSION     8
 
 //
@@ -126,7 +130,8 @@ typedef struct {
 	void ( QDECL * Printf )( int printLevel, const char *fmt, ... );
 
 	// abort the game
-	void ( QDECL * Error )( int errorLevel, const char *fmt, ... );
+	// never returns: ERR_DROP longjmps out, ERR_FATAL exits
+	void ( QDECL * Error )( int errorLevel, const char *fmt, ... ) Q_NORETURN;
 
 	// milliseconds should only be used for profiling, never
 	// for anything game related.  Get time from the refdef

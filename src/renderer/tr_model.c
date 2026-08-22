@@ -759,6 +759,12 @@ static qboolean R_LoadMDC( model_t *mod, int lod, void *buffer, const char *mod_
 		ri.Printf( PRINT_WARNING, "R_LoadMDC: %s has no frames\n", mod_name );
 		return qfalse;
 	}
+	if ( mod->mdc[lod]->numFrames > MD3_MAX_FRAMES || mod->mdc[lod]->numSurfaces < 0 || mod->mdc[lod]->numSurfaces > MD3_MAX_SURFACES
+		 || mod->mdc[lod]->numTags < 0 || mod->mdc[lod]->numTags > MD3_MAX_TAGS ) {
+		ri.Printf( PRINT_WARNING, "R_LoadMDC: %s has a bad header (%i frames, %i surfaces, %i tags)\n", mod_name,
+				   mod->mdc[lod]->numFrames, mod->mdc[lod]->numSurfaces, mod->mdc[lod]->numTags );
+		return qfalse;
+	}
 
 	// swap all the frames
 	frame = ( md3Frame_t * )( (byte *)mod->mdc[lod] + mod->mdc[lod]->ofsFrames );
@@ -964,6 +970,12 @@ static qboolean R_LoadMD3( model_t *mod, int lod, void *buffer, const char *mod_
 		ri.Printf( PRINT_WARNING, "R_LoadMD3: %s has no frames\n", mod_name );
 		return qfalse;
 	}
+	if ( mod->md3[lod]->numFrames > MD3_MAX_FRAMES || mod->md3[lod]->numSurfaces < 0 || mod->md3[lod]->numSurfaces > MD3_MAX_SURFACES
+		 || mod->md3[lod]->numTags < 0 || mod->md3[lod]->numTags > MD3_MAX_TAGS ) {
+		ri.Printf( PRINT_WARNING, "R_LoadMD3: %s has a bad header (%i frames, %i surfaces, %i tags)\n", mod_name,
+				   mod->md3[lod]->numFrames, mod->md3[lod]->numSurfaces, mod->md3[lod]->numTags );
+		return qfalse;
+	}
 
 	if ( strstr( mod->name,"sherman" ) || strstr( mod->name, "mg42" ) ) {
 		fixRadius = qtrue;
@@ -1161,6 +1173,12 @@ static qboolean R_LoadMDS( model_t *mod, void *buffer, const char *mod_name ) {
 
 	if ( mds->numFrames < 1 ) {
 		ri.Printf( PRINT_WARNING, "R_LoadMDS: %s has no frames\n", mod_name );
+		return qfalse;
+	}
+	if ( mds->numBones < 0 || mds->numBones > MDS_MAX_BONES || mds->numSurfaces < 0 || mds->numSurfaces > MDS_MAX_SURFACES
+		 || mds->numTags < 0 || mds->numTags > MDS_MAX_TAGS ) {
+		ri.Printf( PRINT_WARNING, "R_LoadMDS: %s has a bad header (%i bones, %i surfaces, %i tags)\n", mod_name,
+				   mds->numBones, mds->numSurfaces, mds->numTags );
 		return qfalse;
 	}
 

@@ -98,6 +98,7 @@ cvar_t  *r_ext_compressed_textures;
 cvar_t  *r_ext_gamma_control;
 cvar_t  *r_ext_multitexture;
 cvar_t  *r_ext_compiled_vertex_array;
+cvar_t  *r_ext_max_anisotropy;
 cvar_t  *r_ext_texture_env_add;
 
 //----(SA)	added
@@ -316,8 +317,11 @@ void SMP_InitGL( void ) {
 		}
 	}
 
-	// print info
-	GfxInfo_f();
+	// print info, but only in developer mode to keep the startup log quiet;
+	// the explicit "gfxinfo" command always prints
+	if ( ri.Cvar_Get( "developer", "0", 0 )->integer ) {
+		GfxInfo_f();
+	}
 
 	// set default state
 	GL_SetDefaultState();
@@ -452,7 +456,7 @@ static void R_ModeList_f( void ) {
 R_TakeScreenshot
 ==================
 */
-void R_TakeScreenshot( int x, int y, int width, int height, char *fileName ) {
+static void RB_TakeScreenshot( int x, int y, int width, int height, char *fileName ) {
 	byte        *buffer;
 	int i, c, temp;
 
@@ -491,7 +495,7 @@ void R_TakeScreenshot( int x, int y, int width, int height, char *fileName ) {
 R_TakeScreenshotJPEG
 ==============
 */
-void R_TakeScreenshotJPEG( int x, int y, int width, int height, char *fileName ) {
+static void RB_TakeScreenshotJPEG( int x, int y, int width, int height, char *fileName ) {
 	byte        *buffer;
 
 	buffer = ri.Hunk_AllocateTempMemory( glConfig.vidWidth * glConfig.vidHeight * 4 );
@@ -507,6 +511,83 @@ void R_TakeScreenshotJPEG( int x, int y, int width, int height, char *fileName )
 	SaveJPG( fileName, 95, glConfig.vidWidth, glConfig.vidHeight, buffer );
 
 	ri.Hunk_FreeTempMemory( buffer );
+}
+
+/*
+==================
+RB_TakeScreenshotCmd
+
+Executed by the backend right before the swap, when the frame is complete;
+reading the buffer from the console command instead would get whatever
+is left in the back buffer after the previous swap.
+==================
+*/
+const void *RB_TakeScreenshotCmd( const void *data ) {
+	const screenshotCommand_t *cmd;
+
+	cmd = (const screenshotCommand_t *)data;
+
+	// finish the frame the way the player sees it
+	if ( tess.numIndexes ) {
+		RB_EndSurface();
+	}
+	RB_OverbrightPass();
+
+	if ( cmd->jpeg ) {
+		RB_TakeScreenshotJPEG( cmd->x, cmd->y, cmd->width, cmd->height, (char *)cmd->fileName );
+	} else {
+		RB_TakeScreenshot( cmd->x, cmd->y, cmd->width, cmd->height, (char *)cmd->fileName );
+	}
+
+	return (const void *)( cmd + 1 );
+}
+
+/*
+==================
+R_TakeScreenshot
+
+Records a screenshot request; R_IssuePendingScreenshot() puts it into the
+command list right before the buffer swap so the backend reads a finished frame.
+Issuing the command here would place it ahead of this frame's draw commands
+(the console command runs before the frame is rendered) and read back the
+previous, possibly undefined, back buffer.
+==================
+*/
+static screenshotCommand_t r_pendingScreenshot;
+static qboolean r_screenshotPending;
+
+void R_TakeScreenshot( int x, int y, int width, int height, char *name, qboolean jpeg ) {
+	screenshotCommand_t *cmd = &r_pendingScreenshot;
+
+	cmd->commandId = RC_SCREENSHOT;
+	cmd->x = x;
+	cmd->y = y;
+	cmd->width = width;
+	cmd->height = height;
+	Q_strncpyz( cmd->fileName, name, sizeof( cmd->fileName ) );
+	cmd->jpeg = jpeg;
+	r_screenshotPending = qtrue;
+}
+
+/*
+==================
+R_IssuePendingScreenshot
+
+Called by RE_EndFrame before the swap command is queued
+==================
+*/
+void R_IssuePendingScreenshot( void ) {
+	screenshotCommand_t *cmd;
+
+	if ( !r_screenshotPending ) {
+		return;
+	}
+	cmd = R_GetCommandBuffer( sizeof( *cmd ) );
+	if ( !cmd ) {
+		return;
+	}
+	*cmd = r_pendingScreenshot;
+	r_screenshotPending = qfalse;
 }
 
 /*
@@ -684,7 +765,7 @@ void R_ScreenShot_f( void ) {
 	}
 
 
-	R_TakeScreenshot( 0, 0, glConfig.vidWidth, glConfig.vidHeight, checkname );
+	R_TakeScreenshot( 0, 0, glConfig.vidWidth, glConfig.vidHeight, checkname, qfalse );
 
 	if ( !silent ) {
 		ri.Printf( PRINT_ALL, "Wrote %s\n", checkname );
@@ -739,7 +820,7 @@ void R_ScreenShotJPEG_f( void ) {
 	}
 
 
-	R_TakeScreenshotJPEG( 0, 0, glConfig.vidWidth, glConfig.vidHeight, checkname );
+	R_TakeScreenshot( 0, 0, glConfig.vidWidth, glConfig.vidHeight, checkname, qtrue );
 
 	if ( !silent ) {
 		ri.Printf( PRINT_ALL, "Wrote %s\n", checkname );
@@ -847,46 +928,46 @@ void GfxInfo_f( void ) {
 	char *stringpos;
 	char stringout[128];
 
-	ri.Printf( PRINT_DEVELOPER, "\nGL_VENDOR: %s\n", glConfig.vendor_string );
-	ri.Printf( PRINT_DEVELOPER, "GL_RENDERER: %s\n", glConfig.renderer_string );
-	ri.Printf( PRINT_DEVELOPER, "GL_VERSION: %s\n", glConfig.version_string );
+	ri.Printf( PRINT_ALL, "\nGL_VENDOR: %s\n", glConfig.vendor_string );
+	ri.Printf( PRINT_ALL, "GL_RENDERER: %s\n", glConfig.renderer_string );
+	ri.Printf( PRINT_ALL, "GL_VERSION: %s\n", glConfig.version_string );
 
 	if ( glConfig.extensions_string ) {
-		ri.Printf( PRINT_DEVELOPER, "GL_EXTENSIONS:  " );
+		ri.Printf( PRINT_ALL, "GL_EXTENSIONS:  " );
 		stringlen = strlen ( glConfig.extensions_string );
 		stringpos = glConfig.extensions_string;
 		while ( stringlen > 0 ) {
 			Q_strncpyz( stringout, stringpos, 126 );
-			ri.Printf( PRINT_DEVELOPER, "%s", stringout );
+			ri.Printf( PRINT_ALL, "%s", stringout );
 			stringpos += 125;
 			stringlen -= 125;
 		}
-		ri.Printf( PRINT_DEVELOPER, "\n" );
+		ri.Printf( PRINT_ALL, "\n" );
 	}
-	ri.Printf( PRINT_DEVELOPER, "GL_MAX_TEXTURE_SIZE: %d\n", glConfig.maxTextureSize );
-	ri.Printf( PRINT_DEVELOPER, "GL_MAX_ACTIVE_TEXTURES_ARB: %d\n", glConfig.maxActiveTextures );
-	ri.Printf( PRINT_DEVELOPER, "\nPIXELFORMAT: color(%d-bits) Z(%d-bit) stencil(%d-bits)\n", glConfig.colorBits, glConfig.depthBits, glConfig.stencilBits );
-	ri.Printf( PRINT_DEVELOPER, "MODE: %d, %d x %d %s hz:", r_mode->integer, glConfig.vidWidth, glConfig.vidHeight, fsstrings[r_fullscreen->integer == 1] );
+	ri.Printf( PRINT_ALL, "GL_MAX_TEXTURE_SIZE: %d\n", glConfig.maxTextureSize );
+	ri.Printf( PRINT_ALL, "GL_MAX_ACTIVE_TEXTURES_ARB: %d\n", glConfig.maxActiveTextures );
+	ri.Printf( PRINT_ALL, "\nPIXELFORMAT: color(%d-bits) Z(%d-bit) stencil(%d-bits)\n", glConfig.colorBits, glConfig.depthBits, glConfig.stencilBits );
+	ri.Printf( PRINT_ALL, "MODE: %d, %d x %d %s hz:", r_mode->integer, glConfig.vidWidth, glConfig.vidHeight, fsstrings[r_fullscreen->integer == 1] );
 	if ( glConfig.displayFrequency ) {
-		ri.Printf( PRINT_DEVELOPER, "%d\n", glConfig.displayFrequency );
+		ri.Printf( PRINT_ALL, "%d\n", glConfig.displayFrequency );
 	} else
 	{
-		ri.Printf( PRINT_DEVELOPER, "N/A\n" );
+		ri.Printf( PRINT_ALL, "N/A\n" );
 	}
 	if ( glConfig.deviceSupportsGamma ) {
-		ri.Printf( PRINT_DEVELOPER, "GAMMA: hardware w/ %d overbright bits\n", tr.overbrightBits );
+		ri.Printf( PRINT_ALL, "GAMMA: hardware w/ %d overbright bits\n", tr.overbrightBits );
 	} else
 	{
-		ri.Printf( PRINT_DEVELOPER, "GAMMA: software w/ %d overbright bits\n", tr.overbrightBits );
+		ri.Printf( PRINT_ALL, "GAMMA: software w/ %d overbright bits\n", tr.overbrightBits );
 	}
-	ri.Printf( PRINT_DEVELOPER, "CPU: %s\n", sys_cpustring->string );
+	ri.Printf( PRINT_ALL, "CPU: %s\n", sys_cpustring->string );
 
 	// rendering primitives
 	{
 		int primitives;
 
 		// default is to use triangles if compiled vertex arrays are present
-		ri.Printf( PRINT_DEVELOPER, "rendering primitives: " );
+		ri.Printf( PRINT_ALL, "rendering primitives: " );
 		primitives = r_primitives->integer;
 		if ( primitives == 0 ) {
 			if ( qglLockArraysEXT ) {
@@ -896,52 +977,52 @@ void GfxInfo_f( void ) {
 			}
 		}
 		if ( primitives == -1 ) {
-			ri.Printf( PRINT_DEVELOPER, "none\n" );
+			ri.Printf( PRINT_ALL, "none\n" );
 		} else if ( primitives == 2 ) {
-			ri.Printf( PRINT_DEVELOPER, "single glDrawElements\n" );
+			ri.Printf( PRINT_ALL, "single glDrawElements\n" );
 		} else if ( primitives == 1 ) {
-			ri.Printf( PRINT_DEVELOPER, "multiple glArrayElement\n" );
+			ri.Printf( PRINT_ALL, "multiple glArrayElement\n" );
 		} else if ( primitives == 3 ) {
-			ri.Printf( PRINT_DEVELOPER, "multiple glColor4ubv + glTexCoord2fv + glVertex3fv\n" );
+			ri.Printf( PRINT_ALL, "multiple glColor4ubv + glTexCoord2fv + glVertex3fv\n" );
 		}
 	}
 
-	ri.Printf( PRINT_DEVELOPER, "texturemode: %s\n", r_textureMode->string );
-	ri.Printf( PRINT_DEVELOPER, "picmip: %d\n", r_picmip->integer );
-	ri.Printf( PRINT_DEVELOPER, "picmip2: %d\n", r_picmip2->integer );
-	ri.Printf( PRINT_DEVELOPER, "texture bits: %d\n", r_texturebits->integer );
-	ri.Printf( PRINT_DEVELOPER, "multitexture: %s\n", enablestrings[qglActiveTextureARB != 0] );
-	ri.Printf( PRINT_DEVELOPER, "compiled vertex arrays: %s\n", enablestrings[qglLockArraysEXT != 0 ] );
-	ri.Printf( PRINT_DEVELOPER, "texenv add: %s\n", enablestrings[glConfig.textureEnvAddAvailable != 0] );
-	ri.Printf( PRINT_DEVELOPER, "compressed textures: %s\n", enablestrings[glConfig.textureCompression != TC_NONE] );
+	ri.Printf( PRINT_ALL, "texturemode: %s\n", r_textureMode->string );
+	ri.Printf( PRINT_ALL, "picmip: %d\n", r_picmip->integer );
+	ri.Printf( PRINT_ALL, "picmip2: %d\n", r_picmip2->integer );
+	ri.Printf( PRINT_ALL, "texture bits: %d\n", r_texturebits->integer );
+	ri.Printf( PRINT_ALL, "multitexture: %s\n", enablestrings[qglActiveTextureARB != 0] );
+	ri.Printf( PRINT_ALL, "compiled vertex arrays: %s\n", enablestrings[qglLockArraysEXT != 0 ] );
+	ri.Printf( PRINT_ALL, "texenv add: %s\n", enablestrings[glConfig.textureEnvAddAvailable != 0] );
+	ri.Printf( PRINT_ALL, "compressed textures: %s\n", enablestrings[glConfig.textureCompression != TC_NONE] );
 
-	ri.Printf( PRINT_DEVELOPER, "ATI truform: %s\n", enablestrings[qglPNTrianglesiATI != 0] );
+	ri.Printf( PRINT_ALL, "ATI truform: %s\n", enablestrings[qglPNTrianglesiATI != 0] );
 	if ( qglPNTrianglesiATI ) {
 //DAJ bogus at this point		ri.Printf( PRINT_ALL, "MAX_PN_TRIANGLES_TESSELATION_LEVEL_ATI: %d\n", glConfig.ATIMaxTruformTess );
-		ri.Printf( PRINT_DEVELOPER, "Truform Tess: %d\n", r_ati_truform_tess->integer );
-		ri.Printf( PRINT_DEVELOPER, "Truform Point Mode: %s\n", r_ati_truform_pointmode->string );
-		ri.Printf( PRINT_DEVELOPER, "Truform Normal Mode: %s\n", r_ati_truform_normalmode->string );
+		ri.Printf( PRINT_ALL, "Truform Tess: %d\n", r_ati_truform_tess->integer );
+		ri.Printf( PRINT_ALL, "Truform Point Mode: %s\n", r_ati_truform_pointmode->string );
+		ri.Printf( PRINT_ALL, "Truform Normal Mode: %s\n", r_ati_truform_normalmode->string );
 	}
 
-	ri.Printf( PRINT_DEVELOPER, "NV distance fog: %s\n", enablestrings[glConfig.NVFogAvailable != 0] );
+	ri.Printf( PRINT_ALL, "NV distance fog: %s\n", enablestrings[glConfig.NVFogAvailable != 0] );
 	if ( glConfig.NVFogAvailable ) {
-		ri.Printf( PRINT_DEVELOPER, "Fog Mode: %s\n", r_nv_fogdist_mode->string );
+		ri.Printf( PRINT_ALL, "Fog Mode: %s\n", r_nv_fogdist_mode->string );
 	}
 
 	if ( r_vertexLight->integer || glConfig.hardwareType == GLHW_PERMEDIA2 ) {
-		ri.Printf( PRINT_DEVELOPER, "HACK: using vertex lightmap approximation\n" );
+		ri.Printf( PRINT_ALL, "HACK: using vertex lightmap approximation\n" );
 	}
 	if ( glConfig.hardwareType == GLHW_RAGEPRO ) {
-		ri.Printf( PRINT_DEVELOPER, "HACK: ragePro approximations\n" );
+		ri.Printf( PRINT_ALL, "HACK: ragePro approximations\n" );
 	}
 	if ( glConfig.hardwareType == GLHW_RIVA128 ) {
-		ri.Printf( PRINT_DEVELOPER, "HACK: riva128 approximations\n" );
+		ri.Printf( PRINT_ALL, "HACK: riva128 approximations\n" );
 	}
 	if ( glConfig.smpActive ) {
-		ri.Printf( PRINT_DEVELOPER, "Using dual processor acceleration\n" );
+		ri.Printf( PRINT_ALL, "Using dual processor acceleration\n" );
 	}
 	if ( r_finish->integer ) {
-		ri.Printf( PRINT_DEVELOPER, "Forcing glFinish\n" );
+		ri.Printf( PRINT_ALL, "Forcing glFinish\n" );
 	}
 }
 
@@ -963,6 +1044,7 @@ void R_Register( void ) {
 	r_ext_gamma_control = ri.Cvar_Get( "r_ext_gamma_control", "1", CVAR_ARCHIVE | CVAR_LATCH );
 	r_ext_multitexture = ri.Cvar_Get( "r_ext_multitexture", "1", CVAR_ARCHIVE | CVAR_LATCH );
 	r_ext_compiled_vertex_array = ri.Cvar_Get( "r_ext_compiled_vertex_array", "1", CVAR_ARCHIVE | CVAR_LATCH );
+	r_ext_max_anisotropy = ri.Cvar_Get( "r_ext_max_anisotropy", "16", CVAR_ARCHIVE );
 	r_glIgnoreWicked3D = ri.Cvar_Get( "r_glIgnoreWicked3D", "0", CVAR_ARCHIVE | CVAR_LATCH );
 
 //----(SA)	added
@@ -974,7 +1056,7 @@ void R_Register( void ) {
 
 	r_ati_fsaa_samples              = ri.Cvar_Get( "r_ati_fsaa_samples", "1", CVAR_ARCHIVE );       //DAJ valids are 1, 2, 4
 
-	r_ext_texture_filter_anisotropic    = ri.Cvar_Get( "r_ext_texture_filter_anisotropic", "0", CVAR_ARCHIVE );
+	r_ext_texture_filter_anisotropic    = ri.Cvar_Get( "r_ext_texture_filter_anisotropic", "1", CVAR_ARCHIVE | CVAR_LATCH );
 
 	r_ext_NV_fog_dist                   = ri.Cvar_Get( "r_ext_NV_fog_dist", "1", CVAR_ARCHIVE | CVAR_LATCH );
 	r_nv_fogdist_mode                   = ri.Cvar_Get( "r_nv_fogdist_mode", "GL_EYE_RADIAL_NV", CVAR_ARCHIVE );    // default to 'looking good'

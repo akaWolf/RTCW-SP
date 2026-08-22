@@ -45,6 +45,7 @@ If you have questions concerning this license or the applicable additional terms
 
 #define JPEG_INTERNALS
 #include "../jpeg-6/jpeglib.h"
+#include <setjmp.h>
 
 
 static void LoadBMP( const char *name, byte **pic, int *width, int *height );
@@ -156,6 +157,30 @@ static int generateHashValue( const char *fname ) {
 	return hash;
 }
 
+float glMaxAnisotropy = 0;
+
+/*
+===============
+GL_SetAnisotropy
+
+Apply r_ext_max_anisotropy to the currently bound mipmapped texture
+===============
+*/
+void GL_SetAnisotropy( void ) {
+	float aniso;
+
+	if ( glMaxAnisotropy <= 1 ) {
+		return;
+	}
+	aniso = r_ext_max_anisotropy->value;
+	if ( aniso < 1 ) {
+		aniso = 1;
+	} else if ( aniso > glMaxAnisotropy ) {
+		aniso = glMaxAnisotropy;
+	}
+	qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, aniso );
+}
+
 /*
 ===============
 GL_TextureMode
@@ -194,6 +219,7 @@ void GL_TextureMode( const char *string ) {
 			GL_Bind( glt );
 			qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, gl_filter_min );
 			qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, gl_filter_max );
+			GL_SetAnisotropy();
 		}
 	}
 }
@@ -849,6 +875,7 @@ done:
 	if ( mipmap ) {
 		qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, gl_filter_min );
 		qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, gl_filter_max );
+		GL_SetAnisotropy();
 	} else
 	{
 		qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
@@ -1212,6 +1239,9 @@ static void LoadPCX( const char *filename, byte **pic, byte **palette, int *widt
 
 	if ( palette ) {
 		*palette = malloc( 768 );
+		if ( !*palette ) {
+			ri.Error( ERR_DROP, "LoadPCX: out of memory" );
+		}
 		memcpy( *palette, (byte *)pcx + len - 768, 768 );
 	}
 
@@ -1227,16 +1257,24 @@ static void LoadPCX( const char *filename, byte **pic, byte **palette, int *widt
 	{
 		for ( x = 0 ; x <= xmax ; )
 		{
+			// don't read past the end of a truncated file
+			if ( raw - (byte *)pcx >= len ) {
+				break;
+			}
 			dataByte = *raw++;
 
 			if ( ( dataByte & 0xC0 ) == 0xC0 ) {
 				runLength = dataByte & 0x3F;
+				if ( raw - (byte *)pcx >= len ) {
+					break;
+				}
 				dataByte = *raw++;
 			} else {
 				runLength = 1;
 			}
 
-			while ( runLength-- > 0 )
+			// don't let a run cross the end of the row
+			while ( runLength-- > 0 && x <= xmax )
 				pix[x++] = dataByte;
 		}
 
@@ -1244,8 +1282,11 @@ static void LoadPCX( const char *filename, byte **pic, byte **palette, int *widt
 
 	if ( raw - (byte *)pcx > len ) {
 		ri.Printf( PRINT_DEVELOPER, "PCX file %s was malformed", filename );
-		free( *pic );
-		*pic = NULL;
+		*pic = NULL;    // the buffer belongs to R_GetImageBuffer(), don't free it
+		if ( palette && *palette ) {
+			free( *palette );
+			*palette = NULL;
+		}
 	}
 
 	ri.FS_FreeFile( pcx );
@@ -1265,6 +1306,9 @@ static void LoadPCX32( const char *filename, byte **pic, int *width, int *height
 
 	LoadPCX( filename, &pic8, &palette, width, height );
 	if ( !pic8 ) {
+		if ( palette ) {
+			free( palette );
+		}
 		*pic = NULL;
 		return;
 	}
@@ -1280,7 +1324,7 @@ static void LoadPCX32( const char *filename, byte **pic, int *width, int *height
 		pic32 += 4;
 	}
 
-	free( pic8 );
+	// pic8 belongs to R_GetImageBuffer(), only the palette is ours
 	free( palette );
 }
 
@@ -1510,6 +1554,27 @@ breakOut:;
 	ri.FS_FreeFile( buffer );
 }
 
+/*
+=============
+R_JPGErrorExit
+
+libjpeg's default error handler exits the process; this one drops the image instead
+=============
+*/
+typedef struct {
+	struct jpeg_error_mgr pub;
+	jmp_buf setjmp_buffer;
+} q_jpeg_error_mgr_t;
+
+static void R_JPGErrorExit( j_common_ptr cinfo ) {
+	q_jpeg_error_mgr_t *jerr = (q_jpeg_error_mgr_t *)cinfo->err;
+	char buffer[JMSG_LENGTH_MAX];
+
+	( *cinfo->err->format_message )( cinfo, buffer );
+	ri.Printf( PRINT_WARNING, "WARNING: JPEG error: %s\n", buffer );
+	longjmp( jerr->setjmp_buffer, 1 );
+}
+
 static void LoadJPG( const char *filename, unsigned char **pic, int *width, int *height ) {
 	/* This struct contains the JPEG decompression parameters and pointers to
 	 * working space (which is allocated as needed by the JPEG library).
@@ -1527,7 +1592,7 @@ static void LoadJPG( const char *filename, unsigned char **pic, int *width, int 
 	 * Note that this struct must live as long as the main JPEG parameter
 	 * struct, to avoid dangling-pointer problems.
 	 */
-	struct jpeg_error_mgr jerr;
+	q_jpeg_error_mgr_t jerr;
 	/* More stuff */
 	JSAMPARRAY buffer;      /* Output row buffer */
 	int row_stride;     /* physical row width in output buffer */
@@ -1553,10 +1618,19 @@ static void LoadJPG( const char *filename, unsigned char **pic, int *width, int 
 	 * This routine fills in the contents of struct jerr, and returns jerr's
 	 * address which we place into the link field in cinfo.
 	 */
-	cinfo.err = jpeg_std_error( &jerr );
+	cinfo.err = jpeg_std_error( &jerr.pub );
+	jerr.pub.error_exit = R_JPGErrorExit;
 
 	/* Now we can initialize the JPEG decompression object. */
 	jpeg_create_decompress( &cinfo );
+
+	if ( setjmp( jerr.setjmp_buffer ) ) {
+		// the decoder bailed out: drop the half-decoded image and carry on
+		jpeg_destroy_decompress( &cinfo );
+		ri.FS_FreeFile( fbuffer );
+		*pic = NULL;
+		return;
+	}
 
 	/* Step 2: specify data source (eg, a file) */
 
@@ -2312,12 +2386,10 @@ void R_SetColorMappings( void ) {
 
 	// setup the overbright lighting
 	tr.overbrightBits = r_overBrightBits->integer;
-	if ( !glConfig.deviceSupportsGamma ) {
-		tr.overbrightBits = 0;      // need hardware gamma for overbright
-	}
 
-	// never overbright in windowed mode
-	if ( !glConfig.isFullscreen ) {
+	// without a hardware gamma ramp the doubling is done by RB_OverbrightPass at the
+	// end of the frame, which works in a window as well; a ramp must not touch the desktop
+	if ( glConfig.deviceSupportsGamma && !glConfig.isFullscreen ) {
 		tr.overbrightBits = 0;
 	}
 
@@ -2351,7 +2423,8 @@ void R_SetColorMappings( void ) {
 
 	g = r_gamma->value;
 
-	shift = tr.overbrightBits;
+	// the texture-side table only carries the gamma curve when the doubling happens in RB_OverbrightPass
+	shift = glConfig.deviceSupportsGamma ? tr.overbrightBits : 0;
 
 	for ( i = 0; i < 256; i++ ) {
 		if ( g == 1 ) {
