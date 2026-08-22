@@ -34,6 +34,7 @@ If you have questions concerning this license or the applicable additional terms
 #include <unistd.h>
 #include <sys/mman.h>
 #include <sys/time.h>
+#include <time.h>
 #include <pwd.h>
 
 #include "../game/q_shared.h"
@@ -58,19 +59,35 @@ Sys_Milliseconds
 int curtime;
 int sys_timeBase;
 int Sys_Milliseconds( void ) {
-	struct timeval tp;
-	struct timezone tzp;
+	struct timespec ts;
 
-	gettimeofday( &tp, &tzp );
+	// monotonic: wall clock adjustments must not warp the game time
+	clock_gettime( CLOCK_MONOTONIC, &ts );
 
 	if ( !sys_timeBase ) {
-		sys_timeBase = tp.tv_sec;
-		return tp.tv_usec / 1000;
+		sys_timeBase = ts.tv_sec;
+		return ts.tv_nsec / 1000000;
 	}
 
-	curtime = ( tp.tv_sec - sys_timeBase ) * 1000 + tp.tv_usec / 1000;
+	curtime = ( ts.tv_sec - sys_timeBase ) * 1000 + ts.tv_nsec / 1000000;
 
 	return curtime;
+}
+
+/*
+================
+Sys_Sleep
+================
+*/
+void Sys_Sleep( int msec ) {
+	struct timespec ts;
+
+	if ( msec <= 0 ) {
+		return;
+	}
+	ts.tv_sec = msec / 1000;
+	ts.tv_nsec = ( msec % 1000 ) * 1000000;
+	nanosleep( &ts, NULL );
 }
 
 

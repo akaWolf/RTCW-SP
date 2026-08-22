@@ -329,6 +329,11 @@ static void CM_SubdivideGridColumns( cGrid_t *grid ) {
 		//
 		// we need to subdivide the curve
 		//
+		if ( grid->width + 2 >= MAX_GRID_SIZE ) {
+			// no room left in the grid: keep the approximating column as-is
+			i += 2;
+			continue;
+		}
 		for ( j = 0 ; j < grid->height ; j++ ) {
 			vec3_t prev, mid, next;
 
@@ -631,6 +636,9 @@ static int CM_EdgePlaneNum( cGrid_t *grid, int gridPlanes[MAX_GRID_SIZE][MAX_GRI
 		p1 = grid->points[i][j];
 		p2 = grid->points[i + 1][j];
 		p = CM_GridPlane( gridPlanes, i, j, 0 );
+		if ( p == -1 ) {
+			return -1;
+		}
 		VectorMA( p1, 4, planes[ p ].plane, up );
 		return CM_FindPlane( p1, p2, up );
 
@@ -638,6 +646,9 @@ static int CM_EdgePlaneNum( cGrid_t *grid, int gridPlanes[MAX_GRID_SIZE][MAX_GRI
 		p1 = grid->points[i][j + 1];
 		p2 = grid->points[i + 1][j + 1];
 		p = CM_GridPlane( gridPlanes, i, j, 1 );
+		if ( p == -1 ) {
+			return -1;
+		}
 		VectorMA( p1, 4, planes[ p ].plane, up );
 		return CM_FindPlane( p2, p1, up );
 
@@ -645,6 +656,9 @@ static int CM_EdgePlaneNum( cGrid_t *grid, int gridPlanes[MAX_GRID_SIZE][MAX_GRI
 		p1 = grid->points[i][j];
 		p2 = grid->points[i][j + 1];
 		p = CM_GridPlane( gridPlanes, i, j, 1 );
+		if ( p == -1 ) {
+			return -1;
+		}
 		VectorMA( p1, 4, planes[ p ].plane, up );
 		return CM_FindPlane( p2, p1, up );
 
@@ -652,6 +666,9 @@ static int CM_EdgePlaneNum( cGrid_t *grid, int gridPlanes[MAX_GRID_SIZE][MAX_GRI
 		p1 = grid->points[i + 1][j];
 		p2 = grid->points[i + 1][j + 1];
 		p = CM_GridPlane( gridPlanes, i, j, 0 );
+		if ( p == -1 ) {
+			return -1;
+		}
 		VectorMA( p1, 4, planes[ p ].plane, up );
 		return CM_FindPlane( p1, p2, up );
 
@@ -659,6 +676,9 @@ static int CM_EdgePlaneNum( cGrid_t *grid, int gridPlanes[MAX_GRID_SIZE][MAX_GRI
 		p1 = grid->points[i + 1][j + 1];
 		p2 = grid->points[i][j];
 		p = CM_GridPlane( gridPlanes, i, j, 0 );
+		if ( p == -1 ) {
+			return -1;
+		}
 		VectorMA( p1, 4, planes[ p ].plane, up );
 		return CM_FindPlane( p1, p2, up );
 
@@ -666,6 +686,9 @@ static int CM_EdgePlaneNum( cGrid_t *grid, int gridPlanes[MAX_GRID_SIZE][MAX_GRI
 		p1 = grid->points[i][j];
 		p2 = grid->points[i + 1][j + 1];
 		p = CM_GridPlane( gridPlanes, i, j, 1 );
+		if ( p == -1 ) {
+			return -1;
+		}
 		VectorMA( p1, 4, planes[ p ].plane, up );
 		return CM_FindPlane( p1, p2, up );
 

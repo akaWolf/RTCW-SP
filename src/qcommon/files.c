@@ -550,17 +550,22 @@ static void FS_CopyFile( char *fromOSPath, char *toOSPath ) {
 	// we are using direct malloc instead of Z_Malloc here, so it
 	// probably won't work on a mac... Its only for developers anyway...
 	buf = malloc( len );
+	if ( !buf ) {
+		Com_Error( ERR_FATAL, "FS_CopyFile: out of memory (%i bytes)\n", len );
+	}
 	if ( fread( buf, 1, len, f ) != len ) {
 		Com_Error( ERR_FATAL, "Short read in FS_Copyfiles()\n" );
 	}
 	fclose( f );
 
 	if ( FS_CreatePath( toOSPath ) ) {
+		free( buf );
 		return;
 	}
 
 	f = fopen( toOSPath, "wb" );
 	if ( !f ) {
+		free( buf );
 		return;
 	}
 	if ( fwrite( buf, 1, len, f ) != len ) {
@@ -597,17 +602,22 @@ void FS_CopyFileOS( char *from, char *to ) {
 	// we are using direct malloc instead of Z_Malloc here, so it
 	// probably won't work on a mac... Its only for developers anyway...
 	buf = malloc( len );
+	if ( !buf ) {
+		Com_Error( ERR_FATAL, "FS_CopyFile: out of memory (%i bytes)\n", len );
+	}
 	if ( fread( buf, 1, len, f ) != len ) {
 		Com_Error( ERR_FATAL, "Short read in FS_Copyfiles()\n" );
 	}
 	fclose( f );
 
 	if ( FS_CreatePath( toOSPath ) ) {
+		free( buf );
 		return;
 	}
 
 	f = fopen( toOSPath, "wb" );
 	if ( !f ) {
+		free( buf );
 		return;
 	}
 	if ( fwrite( buf, 1, len, f ) != len ) {
@@ -1089,7 +1099,7 @@ qboolean FS_FileCompare( const char *s1, const char *s2 ) {
 FS_ShiftedStrStr
 ===========
 */
-char *FS_ShiftedStrStr( const char *string, const char *substring, int shift ) {
+const char *FS_ShiftedStrStr( const char *string, const char *substring, int shift ) {
 	char buf[MAX_STRING_TOKENS];
 	int i;
 
@@ -1518,7 +1528,7 @@ void QDECL FS_Printf( fileHandle_t h, const char *fmt, ... ) {
 	char msg[MAXPRINTMSG];
 
 	va_start( argptr,fmt );
-	vsprintf( msg,fmt,argptr );
+	vsnprintf( msg, sizeof( msg ),fmt,argptr );
 	va_end( argptr );
 
 	FS_Write( msg, strlen( msg ), h );
@@ -2029,7 +2039,7 @@ char **FS_ListFilteredFiles( const char *path, const char *extension, char *filt
 	}
 
 	pathLength = strlen( path );
-	if ( path[pathLength - 1] == '\\' || path[pathLength - 1] == '/' ) {
+	if ( pathLength > 0 && ( path[pathLength - 1] == '\\' || path[pathLength - 1] == '/' ) ) {
 		pathLength--;
 	}
 	extensionLength = strlen( extension );
@@ -2888,6 +2898,21 @@ void Com_ReadCDKey( const char *filename );
 FS_Startup
 ================
 */
+/*
+================
+FS_InvalidGameDir
+
+fs_game must be a plain directory name inside the base path ("." is allowed,
+the readme documents it)
+================
+*/
+static qboolean FS_InvalidGameDir( const char *gamedir ) {
+	if ( !strcmp( gamedir, ".." ) || strstr( gamedir, ".." ) || strchr( gamedir, '/' ) || strchr( gamedir, '\\' ) || strchr( gamedir, ':' ) ) {
+		return qtrue;
+	}
+	return qfalse;
+}
+
 static void FS_Startup( const char *gameName ) {
 	const char *homePath;
 	cvar_t  *fs;
@@ -2905,6 +2930,10 @@ static void FS_Startup( const char *gameName ) {
 	}
 	fs_homepath = Cvar_Get( "fs_homepath", homePath, CVAR_INIT );
 	fs_gamedirvar = Cvar_Get( "fs_game", "", CVAR_INIT | CVAR_SYSTEMINFO );
+	if ( FS_InvalidGameDir( fs_gamedirvar->string ) ) {
+		Com_Printf( S_COLOR_YELLOW "WARNING: invalid fs_game '%s' ignored\n", fs_gamedirvar->string );
+		Cvar_Set( "fs_game", "" );
+	}
 	fs_restrict = Cvar_Get( "fs_restrict", "", CVAR_INIT );
 
 	// add search path elements in reverse priority order

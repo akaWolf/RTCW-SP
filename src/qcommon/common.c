@@ -63,6 +63,11 @@ cvar_t  *com_fixedtime;
 cvar_t  *com_dropsim;       // 0.0 to 1.0, simulated packet drops
 cvar_t  *com_journal;
 cvar_t  *com_maxfps;
+cvar_t  *com_maxfpsUnfocused;
+cvar_t  *com_maxfpsMinimized;
+cvar_t  *com_busyWait;
+cvar_t  *com_unfocused;
+cvar_t  *com_minimized;
 cvar_t  *com_timedemo;
 cvar_t  *com_sv_running;
 cvar_t  *com_cl_running;
@@ -145,7 +150,7 @@ void QDECL Com_Printf( const char *fmt, ... ) {
 	static qboolean opening_qconsole = qfalse;
 
 	va_start( argptr,fmt );
-	vsprintf( msg,fmt,argptr );
+	vsnprintf( msg, sizeof( msg ),fmt,argptr );
 	va_end( argptr );
 
 	if ( rd_buffer ) {
@@ -222,7 +227,7 @@ void QDECL Com_DPrintf( const char *fmt, ... ) {
 	}
 
 	va_start( argptr,fmt );
-	vsprintf( msg,fmt,argptr );
+	vsnprintf( msg, sizeof( msg ),fmt,argptr );
 	va_end( argptr );
 
 	Com_Printf( "%s", msg );
@@ -282,7 +287,7 @@ void QDECL Com_Error( int code, const char *fmt, ... ) {
 	com_errorEntered = qtrue;
 
 	va_start( argptr,fmt );
-	vsprintf( com_errorMessage,fmt,argptr );
+	vsnprintf( com_errorMessage, sizeof( com_errorMessage ),fmt,argptr );
 	va_end( argptr );
 
 	if ( code != ERR_DISCONNECT && code != ERR_NEED_CD && code != ERR_ENDGAME ) {
@@ -2025,6 +2030,11 @@ void Com_Init( char *commandLine ) {
 	// init commands and vars
 	//
 	com_maxfps = Cvar_Get( "com_maxfps", "85", CVAR_ARCHIVE );
+	com_maxfpsUnfocused = Cvar_Get( "com_maxfpsUnfocused", "0", CVAR_ARCHIVE );
+	com_maxfpsMinimized = Cvar_Get( "com_maxfpsMinimized", "0", CVAR_ARCHIVE );
+	com_busyWait = Cvar_Get( "com_busyWait", "0", CVAR_ARCHIVE );
+	com_unfocused = Cvar_Get( "com_unfocused", "0", CVAR_ROM );
+	com_minimized = Cvar_Get( "com_minimized", "0", CVAR_ROM );
 	com_blood = Cvar_Get( "com_blood", "1", CVAR_ARCHIVE );
 
 	com_developer = Cvar_Get( "developer", "0", CVAR_TEMP );
@@ -2318,6 +2328,12 @@ void Com_Frame( void ) {
 	// we may want to spin here if things are going too fast
 	if ( !com_dedicated->integer && com_maxfps->integer > 0 && !com_timedemo->integer ) {
 		minMsec = 1000 / com_maxfps->integer;
+		// a minimized or background window may run slower
+		if ( com_minimized->integer && com_maxfpsMinimized->integer > 0 ) {
+			minMsec = 1000 / com_maxfpsMinimized->integer;
+		} else if ( com_unfocused->integer && com_maxfpsUnfocused->integer > 0 ) {
+			minMsec = 1000 / com_maxfpsUnfocused->integer;
+		}
 	} else {
 		minMsec = 1;
 	}
@@ -2327,6 +2343,10 @@ void Com_Frame( void ) {
 			lastTime = com_frameTime;       // possible on first frame
 		}
 		msec = com_frameTime - lastTime;
+		// sleep instead of burning a core, the last millisecond is still spun for accuracy
+		if ( msec < minMsec - 1 && !com_busyWait->integer ) {
+			Sys_Sleep( minMsec - msec - 1 );
+		}
 	} while ( msec < minMsec );
 	Cbuf_Execute();
 
@@ -2870,7 +2890,7 @@ static void keyConcatArgs( void ) {
 }
 
 static void ConcatRemaining( const char *src, const char *start ) {
-	char *str;
+	const char *str;
 
 	str = strstr( src, start );
 	if ( !str ) {

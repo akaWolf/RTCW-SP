@@ -143,13 +143,13 @@ SquareRootFloat
 ================
 */
 float SquareRootFloat( float number ) {
-	long i;
+	int i;      // must be a 32-bit type: 'long' reads past the float on LP64
 	float x, y;
 	const float f = 1.5F;
 
 	x = number * 0.5F;
 	y  = number;
-	i  = *( long * ) &y;
+	i  = *( int * ) &y;
 	i  = 0x5f3759df - ( i >> 1 );
 	y  = *( float * ) &i;
 	y  = y * ( f - ( x * y * y ) );

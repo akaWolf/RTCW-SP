@@ -84,7 +84,7 @@ COM_StripFilename
 */
 void COM_StripFilename( char *in, char *out ) {
 	char *end;
-	Q_strncpyz( out, in, strlen( in ) );
+	strcpy( out, in );
 	end = COM_SkipPath( out );
 	*end = 0;
 }
@@ -374,7 +374,7 @@ void COM_ParseError( char *format, ... ) {
 	static char string[4096];
 
 	va_start( argptr, format );
-	vsprintf( string, format, argptr );
+	vsnprintf( string, sizeof( string ), format, argptr );
 	va_end( argptr );
 
 	Com_Printf( "ERROR: %s, line %d: %s\n", com_parsename, com_lines, string );
@@ -390,7 +390,7 @@ void COM_ParseWarning( char *format, ... ) {
 	static char string[4096];
 
 	va_start( argptr, format );
-	vsprintf( string, format, argptr );
+	vsnprintf( string, sizeof( string ), format, argptr );
 	va_end( argptr );
 
 	Com_Printf( "WARNING: %s, line %d: %s\n", com_parsename, com_lines, string );
@@ -430,6 +430,10 @@ COM_Compress
 ================
 */
 int COM_Compress( char *data_p ) {
+	if ( !data_p ) {
+		return 0;
+	}
+
 	char *datai, *datao;
 	int c, pc, size;
 	qboolean ws = qfalse;
@@ -934,7 +938,7 @@ void QDECL Com_sprintf( char *dest, int size, const char *fmt, ... ) {
 	char bigbuffer[32000];      // big, but small enough to fit in PPC stack
 
 	va_start( argptr,fmt );
-	len = vsprintf( bigbuffer,fmt,argptr );
+	len = vsnprintf( bigbuffer, sizeof( bigbuffer ),fmt,argptr );
 	va_end( argptr );
 	if ( len >= sizeof( bigbuffer ) ) {
 		Com_Error( ERR_FATAL, "Com_sprintf: overflowed bigbuffer" );
@@ -1002,7 +1006,7 @@ char    * QDECL va( char *format, ... ) {
 
 
 	va_start( argptr, format );
-	vsprintf( temp_buffer, format,argptr );
+	vsnprintf( temp_buffer, sizeof( temp_buffer ), format,argptr );
 	va_end( argptr );
 
 	if ( ( len = strlen( temp_buffer ) ) >= MAX_VA_STRING ) {
@@ -1207,7 +1211,7 @@ void Info_RemoveKey( char *s, const char *key ) {
 		*o = 0;
 
 		if ( !strcmp( key, pkey ) ) {
-			strcpy( start, s );  // remove this part
+			memmove( start, s, strlen( s ) + 1 );  // remove this part (buffers overlap)
 			return;
 		}
 
@@ -1265,7 +1269,7 @@ void Info_RemoveKey_Big( char *s, const char *key ) {
 		*o = 0;
 
 		if ( !strcmp( key, pkey ) ) {
-			strcpy( start, s );  // remove this part
+			memmove( start, s, strlen( s ) + 1 );  // remove this part (buffers overlap)
 			return;
 		}
 
@@ -1311,6 +1315,10 @@ void Info_SetValueForKey( char *s, const char *key, const char *value ) {
 		Com_Error( ERR_DROP, "Info_SetValueForKey: oversize infostring" );
 	}
 
+	if ( !value ) {
+		value = "";
+	}
+
 	if ( strchr( key, '\\' ) || strchr( value, '\\' ) ) {
 		Com_Printf( "Can't use keys or values with a \\\n" );
 		return;
@@ -1333,7 +1341,7 @@ void Info_SetValueForKey( char *s, const char *key, const char *value ) {
 
 	Com_sprintf( newi, sizeof( newi ), "\\%s\\%s", key, value );
 
-	if ( strlen( newi ) + strlen( s ) > MAX_INFO_STRING ) {
+	if ( strlen( newi ) + strlen( s ) >= MAX_INFO_STRING ) {
 		Com_Printf( "Info string length exceeded\n" );
 		return;
 	}
@@ -1353,6 +1361,10 @@ void Info_SetValueForKey_Big( char *s, const char *key, const char *value ) {
 
 	if ( strlen( s ) >= BIG_INFO_STRING ) {
 		Com_Error( ERR_DROP, "Info_SetValueForKey: oversize infostring" );
+	}
+
+	if ( !value ) {
+		value = "";
 	}
 
 	if ( strchr( key, '\\' ) || strchr( value, '\\' ) ) {
@@ -1377,7 +1389,7 @@ void Info_SetValueForKey_Big( char *s, const char *key, const char *value ) {
 
 	Com_sprintf( newi, sizeof( newi ), "\\%s\\%s", key, value );
 
-	if ( strlen( newi ) + strlen( s ) > BIG_INFO_STRING ) {
+	if ( strlen( newi ) + strlen( s ) >= BIG_INFO_STRING ) {
 		Com_Printf( "BIG Info string length exceeded\n" );
 		return;
 	}

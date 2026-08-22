@@ -698,7 +698,7 @@ void Com_BeginRedirect( char *buffer, int buffersize, void ( *flush )( char * ) 
 void        Com_EndRedirect( void );
 void QDECL Com_Printf( const char *fmt, ... );
 void QDECL Com_DPrintf( const char *fmt, ... );
-void QDECL Com_Error( int code, const char *fmt, ... );
+void QDECL Com_Error( int code, const char *fmt, ... ) Q_NORETURN;
 void        Com_Quit_f( void );
 int         Com_EventLoop( void );
 int         Com_Milliseconds( void );   // will be journaled properly
@@ -957,7 +957,7 @@ void    *Sys_GetBotLibAPI( void *parms );
 
 char    *Sys_GetCurrentUser( void );
 
-void QDECL Sys_Error( const char *error, ... );
+void QDECL Sys_Error( const char *error, ... ) Q_NORETURN;
 void    Sys_Quit( void );
 char    *Sys_GetClipboardData( void );  // note that this isn't journaled...
 
@@ -967,6 +967,7 @@ void    Sys_Print( const char *msg );
 // Sys_Milliseconds should only be used for profiling purposes,
 // any game related timing information should come from event timestamps
 int     Sys_Milliseconds( void );
+void    Sys_Sleep( int msec );
 
 void    Sys_SnapVector( float *v );
 
@@ -1058,7 +1059,7 @@ void    Huff_Init( huffman_t *huff );
 void    Huff_addRef( huff_t* huff, byte ch );
 int     Huff_Receive( node_t *node, int *ch, byte *fin );
 void    Huff_transmit( huff_t *huff, int ch, byte *fout );
-void    Huff_offsetReceive( node_t *node, int *ch, byte *fin, int *offset );
+void    Huff_offsetReceive( node_t *node, int *ch, byte *fin, int *offset, int maxoffset );
 void    Huff_offsetTransmit( huff_t *huff, int ch, byte *fout, int *offset );
 void    Huff_putBit( int bit, byte *fout, int *offset );
 int     Huff_getBit( byte *fout, int *offset );

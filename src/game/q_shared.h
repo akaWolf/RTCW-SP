@@ -121,6 +121,13 @@ If you have questions concerning this license or the applicable additional terms
 
 #define QDECL
 
+// error/exit functions that never return
+#ifdef __GNUC__
+#define Q_NORETURN __attribute__( ( noreturn ) )
+#else
+#define Q_NORETURN
+#endif
+
 //======================= WIN32 DEFINES =================================
 
 #ifdef WIN32
@@ -774,7 +781,7 @@ qboolean Info_Validate( const char *s );
 void Info_NextPair( const char **s, char *key, char *value );
 
 // this is only here so the functions in q_shared.c and bg_*.c can link
-void QDECL Com_Error( int level, const char *error, ... );
+void QDECL Com_Error( int level, const char *error, ... ) Q_NORETURN;
 void QDECL Com_Printf( const char *msg, ... );
 void QDECL Com_DPrintf( const char *msg, ... );
 

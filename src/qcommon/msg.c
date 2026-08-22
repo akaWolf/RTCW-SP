@@ -124,7 +124,7 @@ void MSG_WriteBits( msg_t *msg, int value, int bits ) {
 		} else {
 			int r;
 
-			r = 1 << ( bits - 1 );
+			r = 1 << ( -bits - 1 );     // bits is negative here (signed value)
 
 			if ( value >  r - 1 || value < -r ) {
 				overflows++;
@@ -222,7 +222,7 @@ int MSG_ReadBits( msg_t *msg, int bits ) {
 		if ( bits ) {
 //			fp = fopen("c:\\netchan.bin", "a");
 			for ( i = 0; i < bits; i += 8 ) {
-				Huff_offsetReceive( msgHuff.decompressor.tree, &get, msg->data, &msg->bit );
+				Huff_offsetReceive( msgHuff.decompressor.tree, &get, msg->data, &msg->bit, msg->cursize << 3 );
 //				fwrite(&get, 1, 1, fp);
 				value |= ( get << ( i + nbits ) );
 			}
@@ -230,7 +230,7 @@ int MSG_ReadBits( msg_t *msg, int bits ) {
 		}
 		msg->readcount = ( msg->bit >> 3 ) + 1;
 	}
-	if ( sgn ) {
+	if ( sgn && bits < 32 ) {   // a full 32 bits needs no sign extension, and ( 1 << 32 ) is undefined
 		if ( value & ( 1 << ( bits - 1 ) ) ) {
 			value |= -1 ^ ( ( 1 << bits ) - 1 );
 		}

@@ -275,9 +275,15 @@ int Huff_Receive( node_t *node, int *ch, byte *fin ) {
 }
 
 /* Get a symbol */
-void Huff_offsetReceive( node_t *node, int *ch, byte *fin, int *offset ) {
+void Huff_offsetReceive( node_t *node, int *ch, byte *fin, int *offset, int maxoffset ) {
 	bloc = *offset;
 	while ( node && node->symbol == INTERNAL_NODE ) {
+		if ( bloc >= maxoffset ) {
+			// ran off the end of the message: return a null symbol and flag the overrun
+			*ch = 0;
+			*offset = maxoffset + 1;
+			return;
+		}
 		if ( get_bit( fin ) ) {
 			node = node->right;
 		} else {
@@ -351,6 +357,10 @@ void Huff_Decompress( msg_t *mbuf, int offset ) {
 	bloc = 16;
 
 	for ( j = 0; j < cch; j++ ) {
+		if ( bloc > ( size << 3 ) ) {                     /* don't read past the end of the input */
+			seq[j] = 0;
+			break;
+		}
 		Huff_Receive( huff.tree, &ch, buffer );               /* Get a character */
 		if ( ch == NYT ) {                                /* We got a NYT, get the symbol associated with it */
 			ch = 0;
