@@ -489,7 +489,8 @@ NET_Init
 ====================
 */
 void NET_Init( void ) {
-	noudp = Cvar_Get( "net_noudp", "0", 0 );
+	// single player talks to its server over the loopback, no reason to listen on the network
+	noudp = Cvar_Get( "net_noudp", "1", 0 );
 	// open sockets
 	if ( !noudp->value ) {
 		NET_OpenIP();

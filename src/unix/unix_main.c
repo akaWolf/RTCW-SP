@@ -260,7 +260,7 @@ static char exit_cmdline[MAX_CMD] = "";
 void Sys_DoStartProcess( char *cmdline );
 
 // single exit point (regular exit or in case of signal fault)
-void Sys_Exit( int ex ) {
+Q_NORETURN void Sys_Exit( int ex ) {
 	Sys_ConsoleInputShutdown();
 
 	// we may be exiting to spawn another process
@@ -353,7 +353,7 @@ void Sys_Error( const char *error, ... ) {
 	CL_Shutdown();
 
 	va_start( argptr,error );
-	vsprintf( string,error,argptr );
+	vsnprintf( string, sizeof( string ),error,argptr );
 	va_end( argptr );
 	fprintf( stderr, "Sys_Error: %s\n", string );
 
@@ -365,7 +365,7 @@ void Sys_Warn( char *warning, ... ) {
 	char string[1024];
 
 	va_start( argptr,warning );
-	vsprintf( string,warning,argptr );
+	vsnprintf( string, sizeof( string ),warning,argptr );
 	va_end( argptr );
 
 	if ( ttycon_on ) {

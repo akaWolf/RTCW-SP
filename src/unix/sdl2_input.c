@@ -43,6 +43,7 @@
 #include "./linux_local.h"
 
 static cvar_t *in_nograb;
+static int pendingChar;     // printable character of the last key press, see SDL_TEXTINPUT
 static cvar_t *in_keyboardDebug = NULL;
 
 static cvar_t   *in_mouse        = NULL;
@@ -124,25 +125,89 @@ static void IN_PrintKey(const SDL_Keysym *keysym, keyNum_t key, qboolean down)
 }
 
 /*
+===============
+IN_KeyFromScancode
+
+Printable keys are bound by their physical position (US layout), so bindings
+and the console key keep working with any keyboard layout. Returns 0 for
+everything else.
+===============
+*/
+static int IN_KeyFromScancode( SDL_Scancode sc ) {
+	if ( sc >= SDL_SCANCODE_A && sc <= SDL_SCANCODE_Z ) {
+		return 'a' + ( sc - SDL_SCANCODE_A );
+	}
+	if ( sc >= SDL_SCANCODE_1 && sc <= SDL_SCANCODE_9 ) {
+		return '1' + ( sc - SDL_SCANCODE_1 );
+	}
+	switch ( sc ) {
+	case SDL_SCANCODE_0:              return '0';
+	case SDL_SCANCODE_SPACE:          return ' ';
+	case SDL_SCANCODE_MINUS:          return '-';
+	case SDL_SCANCODE_EQUALS:         return '=';
+	case SDL_SCANCODE_LEFTBRACKET:    return '[';
+	case SDL_SCANCODE_RIGHTBRACKET:   return ']';
+	case SDL_SCANCODE_BACKSLASH:      return '\\';
+	case SDL_SCANCODE_NONUSHASH:      return '\\';
+	case SDL_SCANCODE_SEMICOLON:      return ';';
+	case SDL_SCANCODE_APOSTROPHE:     return '\'';
+	case SDL_SCANCODE_GRAVE:          return '`';
+	case SDL_SCANCODE_COMMA:          return ',';
+	case SDL_SCANCODE_PERIOD:         return '.';
+	case SDL_SCANCODE_SLASH:          return '/';
+	case SDL_SCANCODE_NONUSBACKSLASH: return '<';
+	default:                          return 0;
+	}
+}
+
+/*
+===============
+IN_ShiftedChar
+
+The character shift + key produces on a US layout, used as the console
+fallback when SDL_TEXTINPUT delivers characters the console can't show
+===============
+*/
+static int IN_ShiftedChar( int c ) {
+	static const char *plain   = "`1234567890-=[]\\;',./";
+	static const char *shifted = "~!@#$%^&*()_+{}|:\"<>?";
+	const char *p;
+
+	if ( c >= 'a' && c <= 'z' ) {
+		return c - 0x20;
+	}
+	p = c ? strchr( plain, c ) : NULL;
+	if ( p ) {
+		return shifted[p - plain];
+	}
+	return c;
+}
+
+/*
  * @brief translates SDL keyboard identifier to its Q3 counterpart
  */
 static const char *IN_TranslateSDLToQ3Key(SDL_Keysym *keysym,
                                           keyNum_t *key, qboolean down)
 {
 	static unsigned char buf[2] = { '\0', '\0' };
+	int sym = IN_KeyFromScancode( keysym->scancode );
 
-	if (keysym->sym >= SDLK_SPACE && keysym->sym < SDLK_DELETE)
+	// the physical key position wins for the printable keys, so bindings and the
+	// console key work with any keyboard layout; the actual characters arrive via
+	// SDL_TEXTINPUT, buf[] is only the fallback for layouts the console can't show
+	if ( !sym )
+	{
+		sym = keysym->sym;
+	}
+
+	if (sym >= SDLK_SPACE && sym < SDLK_DELETE)
 	{
 		// These happen to match the ASCII chars
-		*key = (int)keysym->sym;
-		// SDL2 depreciates unicode... no shifted chars
-		buf[0] = keysym->sym;
+		*key = sym;
+		buf[0] = sym;
 		if ( keysym->mod & (KMOD_RSHIFT | KMOD_LSHIFT) )
 		{
-			if (keysym->sym >= 'a' && 'z' >= keysym->sym)
-				buf[0] -= 0x20;
-			else if (keysym->sym == 0x2d)
-				buf[0] = 0x5f; // "-" to "_"
+			buf[0] = IN_ShiftedChar( sym );
 		}
 	}
 	else
@@ -687,11 +752,22 @@ static void IN_ProcessEvents(void)
 			if (key)
 			{
 				Com_QueueEvent(0, SE_KEY, key, qtrue, 0, NULL);
+				// ctrl + letter is a control character for the console (ctrl-v paste etc)
+				if ((e.key.keysym.mod & KMOD_CTRL) && key >= 'a' && key <= 'z')
+				{
+					Com_QueueEvent(0, SE_CHAR, key - 'a' + 1, 0, 0, NULL);
+				}
 			}
 
-			if (character)
+			// printable characters arrive through SDL_TEXTINPUT, control
+			// characters (backspace) come straight from the key
+			pendingChar = 0;
+			if (character && *character)
 			{
-				Com_QueueEvent(0, SE_CHAR, *character, 0, 0, NULL);
+				if (*character < ' ')
+					Com_QueueEvent(0, SE_CHAR, *character, 0, 0, NULL);
+				else
+					pendingChar = *character;
 			}
 			break;
 
@@ -719,54 +795,82 @@ static void IN_ProcessEvents(void)
 			case 3:   b = K_MOUSE2;     break;
 			case 4:   b = K_MOUSE4;     break;
 			case 5:   b = K_MOUSE5;     break;
-			default:  b = K_AUX1 + (e.button.button - 8) % 16; break;
+			default:  b = K_AUX1 + (e.button.button - SDL_BUTTON_X2 - 1) % 16; break;
 			}
 			Com_QueueEvent(0, SE_KEY, b,
 			               (e.type == SDL_MOUSEBUTTONDOWN ? qtrue : qfalse), 0, NULL);
 			break;
 
-        case SDL_MOUSEWHEEL:
-			if (e.wheel.y > 0)
-				scrollwheel = K_MWHEELUP;
-			else
-				scrollwheel = K_MWHEELDOWN;
-			// fake mouse wheel "key"
-			Com_QueueEvent(0, SE_KEY, scrollwheel, qtrue, 0, NULL);
+		case SDL_MOUSEWHEEL:
+			// vertical only, and the fake wheel "key" is pressed and released at once
+			if (e.wheel.y != 0)
+			{
+				scrollwheel = e.wheel.y > 0 ? K_MWHEELUP : K_MWHEELDOWN;
+				Com_QueueEvent(0, SE_KEY, scrollwheel, qtrue, 0, NULL);
+				Com_QueueEvent(0, SE_KEY, scrollwheel, qfalse, 0, NULL);
+			}
 			break;
 
 		case SDL_QUIT:
 			Cbuf_ExecuteText(EXEC_NOW, "quit Closed window\n");
 			break;
 
-		case SDL_WINDOWEVENT_RESIZED:
-		{
-			char width[32], height[32];
-			Com_sprintf(width, sizeof(width), "%d", e.window.data1);
-			Com_sprintf(height, sizeof(height), "%d", e.window.data2);
-			Cvar_Set("r_customwidth", width);
-			Cvar_Set("r_customheight", height);
-			Cvar_Set("r_mode", "-1");
-			/* wait until user stops dragging for 1 second, so
-			   we aren't constantly recreating the GL context while
-			   he tries to drag...*/
-			vidRestartTime = Sys_Milliseconds() + 1000;
-		}
-		break;
 		case SDL_WINDOWEVENT:
-			if (e.window.event & SDL_WINDOW_INPUT_FOCUS)
+			switch (e.window.event)
 			{
-				Cvar_SetValue("com_unfocused", !(SDL_GetWindowFlags( SDLvidscreen ) & SDL_WINDOW_INPUT_FOCUS) );
+			case SDL_WINDOWEVENT_MINIMIZED:    Cvar_SetValue("com_minimized", 1); break;
+			case SDL_WINDOWEVENT_RESTORED:
+			case SDL_WINDOWEVENT_MAXIMIZED:    Cvar_SetValue("com_minimized", 0); break;
+			case SDL_WINDOWEVENT_FOCUS_LOST:   Cvar_SetValue("com_unfocused", 1); break;
+			case SDL_WINDOWEVENT_FOCUS_GAINED: Cvar_SetValue("com_unfocused", 0); break;
+			case SDL_WINDOWEVENT_SIZE_CHANGED:
+			{
+				int width = e.window.data1, height = e.window.data2;
+
+				// a tiling window manager or an emulated fullscreen mode can give us a
+				// different size than requested; render at the size we actually got
+				if (width > 0 && height > 0 && (width != cls.glconfig.vidWidth || height != cls.glconfig.vidHeight))
+				{
+					Com_Printf("Window resized to %dx%d, restarting video\n", width, height);
+					Cvar_SetValue("r_customwidth", width);
+					Cvar_SetValue("r_customheight", height);
+					Cvar_Set("r_mode", "-1");
+					// wait until the window manager is done resizing before recreating the context
+					vidRestartTime = Sys_Milliseconds() + 1000;
+				}
+				break;
 			}
-			if (e.window.event & (SDL_WINDOW_SHOWN | SDL_WINDOW_MINIMIZED))
-			{
-				Cvar_SetValue("com_minimized", !(SDL_GetWindowFlags( SDLvidscreen ) & SDL_WINDOW_MINIMIZED) );
-				//  if ( e.active.gain && Cvar_VariableIntegerValue("r_fullscreen") )
-				//      Cbuf_ExecuteText( EXEC_APPEND, "vid_restart\n" );
+			default: break;
 			}
 			break;
-
-		case SDL_TEXTEDITING:
 		case SDL_TEXTINPUT:
+		{
+			const unsigned char *c;
+			qboolean ascii = qtrue;
+
+			for (c = (const unsigned char *)e.text.text; *c; c++)
+			{
+				if (*c >= 128)
+					ascii = qfalse;
+			}
+			if (ascii)
+			{
+				for (c = (const unsigned char *)e.text.text; *c; c++)
+				{
+					if (*c >= ' ' && *c < 127)
+						Com_QueueEvent(0, SE_CHAR, *c, 0, 0, NULL);
+				}
+			}
+			else if (pendingChar)
+			{
+				// the console can't show this layout's characters:
+				// type what the same key produces on a US layout instead
+				Com_QueueEvent(0, SE_CHAR, pendingChar, 0, 0, NULL);
+			}
+			pendingChar = 0;
+			break;
+		}
+		case SDL_TEXTEDITING:
 		default:
 			break;
 		}
@@ -776,7 +880,7 @@ static void IN_ProcessEvents(void)
 void IN_Frame(void)
 {
 	qboolean loading;
-	qboolean fullscreen = qtrue;
+	qboolean fullscreen;
 
 	IN_JoyMove();
 	IN_ProcessEvents();
@@ -784,8 +888,15 @@ void IN_Frame(void)
 	// If not DISCONNECTED (main menu) or ACTIVE (in game), we're loading
 	loading = !!(cls.state != CA_DISCONNECTED && cls.state != CA_ACTIVE);
 
-	if (!fullscreen && (  (Key_GetCatcher() & KEYCATCH_CONSOLE) ||
-			loading || !SDL_GetWindowGrab(SDLvidscreen)  ))
+	fullscreen = !!(SDL_GetWindowFlags(SDLvidscreen) & SDL_WINDOW_FULLSCREEN);
+
+	if (!fullscreen && ((Key_GetCatcher() & KEYCATCH_CONSOLE) || loading))
+	{
+		// let the player reach the rest of the desktop from a window
+		if (mouseActive)
+			IN_DeactivateMouse();
+	}
+	else if (!(SDL_GetWindowFlags(SDLvidscreen) & SDL_WINDOW_INPUT_FOCUS))
 	{
 		if (mouseActive)
 			IN_DeactivateMouse();
@@ -800,7 +911,7 @@ void IN_Frame(void)
 	if ((vidRestartTime != 0) && (vidRestartTime < Sys_Milliseconds()))
 	{
 		vidRestartTime = 0;
-		Cbuf_AddText("vid_restart");
+		Cbuf_AddText("vid_restart\n");
 	}
 }
 
@@ -826,6 +937,9 @@ void IN_Init(void)
 	in_joystickDebug     = Cvar_Get("in_joystickDebug", "0", CVAR_TEMP);
 	in_joystickThreshold = Cvar_Get("joy_threshold", "0.15", CVAR_ARCHIVE);
 
+	// printable characters for the console come through SDL_TEXTINPUT
+	SDL_StartTextInput();
+
 /* Depreciated calls:
 	SDL_EnableUNICODE(1);
 	SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY, SDL_DEFAULT_REPEAT_INTERVAL);
@@ -845,7 +959,7 @@ void IN_Init(void)
 
 	flags = SDL_GetWindowFlags( SDLvidscreen );
 	Cvar_SetValue("com_unfocused", !(flags & SDL_WINDOW_INPUT_FOCUS) );
-	Cvar_SetValue("com_minimized", !(flags & SDL_WINDOW_MINIMIZED) );
+	Cvar_SetValue("com_minimized", !!(flags & SDL_WINDOW_MINIMIZED) );
 
 	IN_InitJoystick();
 }

@@ -107,13 +107,33 @@ static qboolean signalcaught = qfalse;
 
 void Sys_Exit( int );
 
+// only async-signal-safe calls belong in a signal handler, so no printf here
+static void signal_write( const char *s ) {
+	ssize_t r = write( STDERR_FILENO, s, strlen( s ) );
+	(void)r;
+}
+
 static void signal_handler( int sig ) {
+	char num[4];
+	int n = 0;
+
+	if ( sig >= 10 ) {
+		num[n++] = '0' + ( sig / 10 ) % 10;
+	}
+	num[n++] = '0' + sig % 10;
+	num[n] = 0;
+
 	if ( signalcaught ) {
-		printf( "DOUBLE SIGNAL FAULT: Received signal %d, exiting...\n", sig );
-		Sys_Exit( 1 );
+		signal_write( "DOUBLE SIGNAL FAULT: Received signal " );
+		signal_write( num );
+		signal_write( ", exiting...\n" );
+		_exit( 1 );
 	}
 	signalcaught = qtrue;
-	printf( "Received signal %d, exiting...\n", sig );
+	signal_write( "Received signal " );
+	signal_write( num );
+	signal_write( ", exiting...\n" );
+	// not async-signal-safe either, but restoring the display is worth the risk
 	GLimp_Shutdown();
 	Sys_Exit( 0 );
 }
@@ -333,6 +353,31 @@ int GLimp_SetMode(int mode, qboolean fullscreen, qboolean noborder)
 		break;
 	}
 
+	if (SDLvidscreen)
+	{
+		int dw, dh;
+
+		// the window manager may not honour the requested size (tiling, emulated fullscreen);
+		// its resize usually arrives within a few ms of mapping, so give it a moment
+		Uint32 settle = SDL_GetTicks();
+		int lw = 0, lh = 0;
+
+		do {
+			SDL_PumpEvents();
+			SDL_GL_GetDrawableSize(SDLvidscreen, &dw, &dh);
+			if (dw != lw || dh != lh) { lw = dw; lh = dh; settle = SDL_GetTicks(); }
+			SDL_Delay(5);
+		} while (SDL_GetTicks() - settle < 60 && SDL_GetTicks() - settle < 400);
+		if (dw > 0 && dh > 0 && (dw != glConfig.vidWidth || dh != glConfig.vidHeight))
+		{
+			ri.Printf(PRINT_ALL, "Window is %dx%d instead of the requested %dx%d, using the real size\n",
+			          dw, dh, glConfig.vidWidth, glConfig.vidHeight);
+			glConfig.vidWidth = dw;
+			glConfig.vidHeight = dh;
+			glConfig.windowAspect = (float)dw / (float)dh;
+		}
+	}
+
 	ri.Printf(PRINT_DEVELOPER, "Mode:\n");
 //	GLimp_DetectAvailableModes();
 
@@ -391,6 +436,8 @@ qboolean GLimp_StartDriverAndSetMode(int mode, qboolean fullscreen, qboolean nob
 	}
 
 	GLContext = SDL_GL_CreateContext( SDLvidscreen );
+	SDL_GL_SetSwapInterval( r_swapInterval->integer );
+	r_swapInterval->modified = qfalse;
 
         if ( !qglGetString(GL_VENDOR) )
                 return qfalse;
@@ -415,6 +462,24 @@ static void GLimp_InitExtensions(void)
 
 	glConfig.textureCompression = TC_NONE;
 
+	// the modern name of the extension; the old GL_S3_s3tc path below stays as a fallback
+	if ( GLimp_HaveExtension( "GL_EXT_texture_compression_s3tc" ) )
+	{
+		if ( r_ext_compressed_textures->value )
+		{
+			glConfig.textureCompression = TC_EXT_COMP_S3TC;
+			ri.Printf( PRINT_DEVELOPER, "...using GL_EXT_texture_compression_s3tc\n" );
+		}
+		else
+		{
+			ri.Printf( PRINT_DEVELOPER, "...ignoring GL_EXT_texture_compression_s3tc\n" );
+		}
+	}
+	else
+	{
+		ri.Printf( PRINT_DEVELOPER, "...GL_EXT_texture_compression_s3tc not found\n" );
+	}
+
 	if (glConfig.textureCompression == TC_NONE)
 	{
 		if (GLimp_HaveExtension("GL_S3_s3tc"))
@@ -433,6 +498,24 @@ static void GLimp_InitExtensions(void)
 		{
 			ri.Printf(PRINT_DEVELOPER, "...GL_S3_s3tc not found\n");
 		}
+	}
+
+	glMaxAnisotropy = 0;
+	if ( GLimp_HaveExtension( "GL_EXT_texture_filter_anisotropic" ) )
+	{
+		if ( r_ext_texture_filter_anisotropic->integer )
+		{
+			qglGetFloatv( GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &glMaxAnisotropy );
+			ri.Printf( PRINT_DEVELOPER, "...using GL_EXT_texture_filter_anisotropic (max %.0f)\n", glMaxAnisotropy );
+		}
+		else
+		{
+			ri.Printf( PRINT_DEVELOPER, "...ignoring GL_EXT_texture_filter_anisotropic\n" );
+		}
+	}
+	else
+	{
+		ri.Printf( PRINT_DEVELOPER, "...GL_EXT_texture_filter_anisotropic not found\n" );
 	}
 
 	glConfig.textureEnvAddAvailable = qfalse;
@@ -549,6 +632,13 @@ void GLimp_Init( void ) {
 Responsible for doing a swapbuffers and possibly for other stuff
 */
 void GLimp_EndFrame( void ) {
+	if ( r_swapInterval->modified ) {
+		r_swapInterval->modified = qfalse;
+		if ( SDL_GL_SetSwapInterval( r_swapInterval->integer ) < 0 ) {
+			ri.Printf( PRINT_WARNING, "WARNING: SDL_GL_SetSwapInterval( %i ) failed: %s\n", r_swapInterval->integer, SDL_GetError() );
+		}
+	}
+
 	// don't flip if drawing to front buffer
 	if (Q_stricmp(r_drawBuffer->string, "GL_FRONT") != 0)
 		SDL_GL_SwapWindow( SDLvidscreen );
