@@ -144,6 +144,9 @@ typedef enum {
 	UI_LAN_COMPARESERVERS,
 	UI_CL_GETLIMBOSTRING,           // NERVE - SMF
 
+	// port extension: developer-only print, filtered by the engine
+	UI_DPRINT,
+
 	UI_MEMSET = 100,
 	UI_MEMCPY,
 	UI_STRNCPY,

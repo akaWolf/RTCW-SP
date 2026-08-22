@@ -46,7 +46,7 @@ void QDECL Com_Error( int level, const char *error, ... ) {
 	char text[1024];
 
 	va_start( argptr, error );
-	vsprintf( text, error, argptr );
+	vsnprintf( text, sizeof( text ), error, argptr );
 	va_end( argptr );
 
 	trap_Error( va( "%s", text ) );
@@ -57,10 +57,21 @@ void QDECL Com_Printf( const char *msg, ... ) {
 	char text[1024];
 
 	va_start( argptr, msg );
-	vsprintf( text, msg, argptr );
+	vsnprintf( text, sizeof( text ), msg, argptr );
 	va_end( argptr );
 
 	trap_Print( va( "%s", text ) );
+}
+
+void QDECL Com_DPrintf( const char *msg, ... ) {
+	va_list argptr;
+	char text[1024];
+
+	va_start( argptr, msg );
+	vsnprintf( text, sizeof( text ), msg, argptr );
+	va_end( argptr );
+
+	trap_DPrint( va( "%s", text ) );
 }
 
 #endif
@@ -418,6 +429,26 @@ void UI_AdjustFrom640( float *x, float *y, float *w, float *h ) {
 	*w *= uiInfo.uiDC.scale;
 	*h *= uiInfo.uiDC.scale;
 #endif
+
+	if ( uiInfo.uiDC.fixedAspect ) {
+		// elements spanning the whole virtual screen keep covering it,
+		// everything else is scaled uniformly and centered
+		if ( *x <= 0 && *x + *w >= 640 ) {
+			*x *= uiInfo.uiDC.xscale;
+			*w *= uiInfo.uiDC.xscale;
+		} else {
+			*x = *x * uiInfo.uiDC.scale + uiInfo.uiDC.bias;
+			*w *= uiInfo.uiDC.scale;
+		}
+		if ( *y <= 0 && *y + *h >= 480 ) {
+			*y *= uiInfo.uiDC.yscale;
+			*h *= uiInfo.uiDC.yscale;
+		} else {
+			*y = *y * uiInfo.uiDC.scale + uiInfo.uiDC.ybias;
+			*h *= uiInfo.uiDC.scale;
+		}
+		return;
+	}
 
 	*x *= uiInfo.uiDC.xscale;
 	*y *= uiInfo.uiDC.yscale;

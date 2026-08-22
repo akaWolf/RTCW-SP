@@ -78,7 +78,6 @@ functions imported from the main executable
 #define CGAME_IMPORT_API_VERSION    3
 
 typedef enum {
-	CG_DPRINT,
 	CG_PRINT,
 	CG_ERROR,
 	CG_MILLISECONDS,
@@ -198,6 +197,10 @@ typedef enum {
 	CG_STARTCAMERA,
 	CG_STOPCAMERA,  //----(SA)	added
 	CG_GETCAMERAINFO,
+
+	// port extension: appended at the end of the sequential block so the
+	// calls above keep their original (retail v3) numbering
+	CG_DPRINT,
 
 	CG_MEMSET = 110,
 	CG_MEMCPY,

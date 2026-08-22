@@ -97,6 +97,7 @@ extern vmCvar_t ui_server15;
 extern vmCvar_t ui_server16;
 
 extern vmCvar_t ui_smallFont;
+extern vmCvar_t ui_fixedAspect;
 extern vmCvar_t ui_bigFont;
 extern vmCvar_t ui_cdkey;
 extern vmCvar_t ui_cdkeychecked;
@@ -987,7 +988,8 @@ void UI_SPSkillMenu_Cache( void );
 // ui_syscalls.c
 //
 void            trap_Print( const char *string );
-void            trap_Error( const char *string );
+void            trap_DPrint( const char *string );
+void            trap_Error( const char *string ) Q_NORETURN;
 int             trap_Milliseconds( void );
 void            trap_Cvar_Register( vmCvar_t *vmCvar, const char *varName, const char *defaultValue, int flags );
 void            trap_Cvar_Update( vmCvar_t *vmCvar );

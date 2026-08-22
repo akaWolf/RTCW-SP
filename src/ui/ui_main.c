@@ -273,14 +273,14 @@ void AssetCache() {
 
 void _UI_DrawSides( float x, float y, float w, float h, float size ) {
 	UI_AdjustFrom640( &x, &y, &w, &h );
-	size *= uiInfo.uiDC.xscale;
+	size *= uiInfo.uiDC.fixedAspect ? uiInfo.uiDC.scale : uiInfo.uiDC.xscale;
 	trap_R_DrawStretchPic( x, y, size, h, 0, 0, 0, 0, uiInfo.uiDC.whiteShader );
 	trap_R_DrawStretchPic( x + w - size, y, size, h, 0, 0, 0, 0, uiInfo.uiDC.whiteShader );
 }
 
 void _UI_DrawTopBottom( float x, float y, float w, float h, float size ) {
 	UI_AdjustFrom640( &x, &y, &w, &h );
-	size *= uiInfo.uiDC.yscale;
+	size *= uiInfo.uiDC.fixedAspect ? uiInfo.uiDC.scale : uiInfo.uiDC.yscale;
 	trap_R_DrawStretchPic( x, y, w, size, 0, 0, 0, 0, uiInfo.uiDC.whiteShader );
 	trap_R_DrawStretchPic( x, y + h - size, w, size, 0, 0, 0, 0, uiInfo.uiDC.whiteShader );
 }
@@ -1113,8 +1113,10 @@ static void UI_LoadTranslationStrings( void ) {
 //		CG_Printf( S_COLOR_RED "WARNING: string translation file (strings.txt not found in main/text)\n" );
 		return;
 	}
-	if ( len > MAX_BUFFER ) {
-//		CG_Error( "%s is too big, make it smaller (max = %i bytes)\n", filename, MAX_BUFFER );
+	if ( len >= MAX_BUFFER ) {
+		Com_Printf( S_COLOR_RED "WARNING: %s is too big (%i bytes, max %i), ignoring\n", filename, len, MAX_BUFFER - 1 );
+		trap_FS_FCloseFile( f );
+		return;
 	}
 
 	// load the file into memory
@@ -1132,6 +1134,9 @@ static void UI_LoadTranslationStrings( void ) {
 			break;
 		}
 		translateStrings[i].localname = malloc( strlen( token ) + 1 );
+		if ( !translateStrings[i].localname ) {
+			Com_Error( ERR_DROP, "UI_LoadTranslationStrings: out of memory" );
+		}
 		strcpy( translateStrings[i].localname, token );
 	}
 }
@@ -6549,12 +6554,16 @@ void _UI_Init( qboolean inGameLoad ) {
 	// for 640x480 virtualized screen
 	uiInfo.uiDC.yscale = uiInfo.uiDC.glconfig.vidHeight * ( 1.0 / 480.0 );
 	uiInfo.uiDC.xscale = uiInfo.uiDC.glconfig.vidWidth * ( 1.0 / 640.0 );
-	if ( uiInfo.uiDC.glconfig.vidWidth * 480 > uiInfo.uiDC.glconfig.vidHeight * 640 ) {
-		// wide screen
-		uiInfo.uiDC.bias = 0.5 * ( uiInfo.uiDC.glconfig.vidWidth - ( uiInfo.uiDC.glconfig.vidHeight * ( 640.0 / 480.0 ) ) );
-	} else {
-		// no wide screen
-		uiInfo.uiDC.bias = 0;
+
+	// cg_fixedAspect: scale the 640x480 layout uniformly and center it
+	uiInfo.uiDC.fixedAspect = ui_fixedAspect.integer;
+	uiInfo.uiDC.scale = uiInfo.uiDC.xscale;
+	uiInfo.uiDC.bias = 0;
+	uiInfo.uiDC.ybias = 0;
+	if ( uiInfo.uiDC.fixedAspect ) {
+		uiInfo.uiDC.scale = uiInfo.uiDC.xscale < uiInfo.uiDC.yscale ? uiInfo.uiDC.xscale : uiInfo.uiDC.yscale;
+		uiInfo.uiDC.bias = 0.5 * ( uiInfo.uiDC.glconfig.vidWidth - 640 * uiInfo.uiDC.scale );
+		uiInfo.uiDC.ybias = 0.5 * ( uiInfo.uiDC.glconfig.vidHeight - 480 * uiInfo.uiDC.scale );
 	}
 
 
@@ -7230,6 +7239,7 @@ vmCvar_t ui_server16;
 
 vmCvar_t ui_cdkeychecked;
 vmCvar_t ui_smallFont;
+vmCvar_t ui_fixedAspect;
 vmCvar_t ui_bigFont;
 
 vmCvar_t ui_selectedPlayer;
@@ -7340,6 +7350,7 @@ cvarTable_t cvarTable[] = {
 	{ &ui_server16, "server16", "", CVAR_ARCHIVE },
 	{ &ui_dedicated, "ui_dedicated", "0", CVAR_ARCHIVE },
 	{ &ui_smallFont, "ui_smallFont", "0.25", CVAR_ARCHIVE},
+	{ &ui_fixedAspect, "cg_fixedAspect", "1", CVAR_ARCHIVE | CVAR_LATCH },
 	{ &ui_bigFont, "ui_bigFont", "0.4", CVAR_ARCHIVE},
 	{ &ui_cdkeychecked, "ui_cdkeychecked", "0", CVAR_ROM },
 	{ &ui_selectedPlayer, "cg_selectedPlayer", "0", CVAR_ARCHIVE},

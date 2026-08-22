@@ -60,6 +60,8 @@ void    trap_Print( const char *fmt ) {
 
 void    trap_Error( const char *fmt ) {
 	syscall( CG_ERROR, fmt );
+	// the engine longjmps away inside the syscall and never comes back
+	exit( 1 );
 }
 
 int     trap_Milliseconds( void ) {

@@ -53,8 +53,14 @@ void trap_Print( const char *string ) {
 	syscall( UI_PRINT, string );
 }
 
+void trap_DPrint( const char *string ) {
+	syscall( UI_DPRINT, string );
+}
+
 void trap_Error( const char *string ) {
 	syscall( UI_ERROR, string );
+	// the engine longjmps away inside the syscall and never comes back
+	exit( 1 );
 }
 
 int trap_Milliseconds( void ) {

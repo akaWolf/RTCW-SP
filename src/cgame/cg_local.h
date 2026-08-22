@@ -76,8 +76,8 @@ If you have questions concerning this license or the applicable additional terms
 #define STAT_MINUS          10  // num frame for '-' stats digit
 
 #define ICON_SIZE           48
-#define CHAR_WIDTH          32
-#define CHAR_HEIGHT         48
+#define HUD_CHAR_WIDTH          32
+#define HUD_CHAR_HEIGHT         48
 #define TEXT_ICON_SPACE     4
 
 #define TEAMCHAT_WIDTH      80
@@ -1525,6 +1525,8 @@ typedef struct {
 	float screenXScale;                 // derived from glconfig
 	float screenYScale;
 	float screenXBias;
+	float screenYBias;
+	float screenScale;                  // uniform 2D scale for cg_fixedAspect
 
 	int serverCommandSequence;              // reliable command stream counter
 	int processedSnapshotNum;            // the number of snapshots cgame has requested
@@ -1683,6 +1685,7 @@ extern vmCvar_t cg_autoswitch;
 extern vmCvar_t cg_ignore;
 extern vmCvar_t cg_simpleItems;
 extern vmCvar_t cg_fov;
+extern vmCvar_t cg_fixedAspect;
 extern vmCvar_t cg_zoomFov;
 extern vmCvar_t cg_zoomDefaultBinoc;
 extern vmCvar_t cg_zoomDefaultSniper;
@@ -1796,7 +1799,7 @@ const char *CG_Argv2( int arg );
 
 void QDECL CG_DPrintf( const char *msg, ... );
 void QDECL CG_Printf( const char *msg, ... );
-void QDECL CG_Error( const char *msg, ... );
+void QDECL CG_Error( const char *msg, ... ) Q_NORETURN;
 
 void CG_StartMusic( void );
 void CG_QueueMusic( void ); //----(SA)	added
@@ -2232,7 +2235,7 @@ void        trap_DPrint( const char *fmt );
 void        trap_Print( const char *fmt );
 
 // abort the game
-void        trap_Error( const char *fmt );
+void        trap_Error( const char *fmt ) Q_NORETURN;
 
 // exit game to main menu (credits/etc)
 void        trap_Endgame( void );   //----(SA)	added

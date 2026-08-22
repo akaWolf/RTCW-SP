@@ -799,6 +799,10 @@ intptr_t CL_UISystemCalls( intptr_t *args ) {
 		Com_Printf( "%s", VMA( 1 ) );
 		return 0;
 
+	case UI_DPRINT:
+		Com_DPrintf( "%s", VMA( 1 ) );
+		return 0;
+
 	case UI_MILLISECONDS:
 		return Sys_Milliseconds();
 

@@ -288,6 +288,7 @@ const char *String_Alloc( const char *p ) {
 		}
 		return &strPool[ph];
 	}
+	Com_Printf( S_COLOR_RED "String_Alloc: string pool (%i bytes) exhausted, '%s' dropped\n", STRING_POOL_SIZE, p );
 	return NULL;
 }
 
@@ -340,7 +341,7 @@ void PC_SourceWarning( int handle, char *format, ... ) {
 	static char string[4096];
 
 	va_start( argptr, format );
-	vsprintf( string, format, argptr );
+	vsnprintf( string, sizeof( string ), format, argptr );
 	va_end( argptr );
 
 	filename[0] = '\0';
@@ -362,7 +363,7 @@ void PC_SourceError( int handle, char *format, ... ) {
 	static char string[4096];
 
 	va_start( argptr, format );
-	vsprintf( string, format, argptr );
+	vsnprintf( string, sizeof( string ), format, argptr );
 	va_end( argptr );
 
 	filename[0] = '\0';
@@ -923,7 +924,7 @@ qboolean Rect_ContainsPoint( rectDef_t *rect, float x, float y ) {
 int Menu_ItemsMatchingGroup( menuDef_t *menu, const char *name ) {
 	int i;
 	int count = 0;
-	char *pdest;
+	const char *pdest;
 	int wildcard = -1;  // if wildcard is set, it's value is the number of characters to compare
 
 
@@ -950,7 +951,7 @@ int Menu_ItemsMatchingGroup( menuDef_t *menu, const char *name ) {
 itemDef_t *Menu_GetMatchingItemByNumber( menuDef_t *menu, int index, const char *name ) {
 	int i;
 	int count = 0;
-	char *pdest;
+	const char *pdest;
 	int wildcard = -1;  // if wildcard is set, it's value is the number of characters to compare
 
 	pdest = strstr( name, "*" ); // allow wildcard strings (ex.  "hide nb_*" would translate to "hide nb_pg1; hide nb_extra" etc)
@@ -1748,7 +1749,7 @@ float Item_Slider_ThumbPosition( itemDef_t *item ) {
 		x = item->window.rect.x;
 	}
 
-	if ( editDef == NULL && item->cvar ) {
+	if ( editDef == NULL || !item->cvar ) {
 		return x;
 	}
 
@@ -2716,9 +2717,15 @@ itemDef_t *Menu_SetPrevCursorItem( menuDef_t *menu ) {
 	while ( menu->cursorItem > -1 ) {
 
 		menu->cursorItem--;
-		if ( menu->cursorItem < 0 && !wrapped ) {
+		if ( menu->cursorItem < 0 ) {
+			if ( wrapped ) {
+				break;      // went all the way around without finding a focusable item
+			}
 			wrapped = qtrue;
 			menu->cursorItem = menu->itemCount - 1;
+			if ( menu->cursorItem < 0 ) {
+				break;      // empty menu
+			}
 		}
 
 		if ( Item_SetFocus( menu->items[menu->cursorItem], DC->cursorx, DC->cursory ) ) {
@@ -2750,7 +2757,9 @@ itemDef_t *Menu_SetNextCursorItem( menuDef_t *menu ) {
 				wrapped = qtrue;
 				menu->cursorItem = 0;
 			} else {
-				return menu->items[oldCursor];
+				// nothing took focus; oldCursor is -1 when no item had focus before
+				menu->cursorItem = oldCursor;
+				return oldCursor >= 0 ? menu->items[oldCursor] : NULL;
 			}
 		}
 
@@ -3245,7 +3254,8 @@ void Item_Text_Wrapped_Paint( itemDef_t *item ) {
 
 void Item_Text_Paint( itemDef_t *item ) {
 	char text[1024];
-	char infostring[SAVE_INFOSTRING_LENGTH];
+	// static: item->text keeps pointing at this buffer after we return
+	static char infostring[SAVE_INFOSTRING_LENGTH];
 	const char *textPtr;
 	int height, width;
 	vec4_t color;
@@ -3880,7 +3890,25 @@ qboolean Item_Bind_HandleKey( itemDef_t *item, int key, qboolean down ) {
 
 
 void AdjustFrom640( float *x, float *y, float *w, float *h ) {
-	//*x = *x * DC->scale + DC->bias;
+	if ( DC->fixedAspect ) {
+		// elements spanning the whole virtual screen keep covering it,
+		// everything else is scaled uniformly and centered
+		if ( *x <= 0 && *x + *w >= 640 ) {
+			*x *= DC->xscale;
+			*w *= DC->xscale;
+		} else {
+			*x = *x * DC->scale + DC->bias;
+			*w *= DC->scale;
+		}
+		if ( *y <= 0 && *y + *h >= 480 ) {
+			*y *= DC->yscale;
+			*h *= DC->yscale;
+		} else {
+			*y = *y * DC->scale + DC->ybias;
+			*h *= DC->scale;
+		}
+		return;
+	}
 	*x *= DC->xscale;
 	*y *= DC->yscale;
 	*w *= DC->xscale;

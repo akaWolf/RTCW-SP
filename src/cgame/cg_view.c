@@ -895,6 +895,16 @@ static int CG_CalcFov( void ) {
 		fov_x = 55;
 	}
 
+	// cg_fixedAspect: keep the 4:3 vertical field of view on wider screens (Hor+)
+	if ( cg_fixedAspect.integer && cg.refdef.width * 480 > cg.refdef.height * 640 ) {
+		float fov_y43;
+
+		x = 640 / tan( fov_x / 360 * M_PI );
+		fov_y43 = atan2( 480, x );
+		x = cg.refdef.height / tan( fov_y43 );
+		fov_x = atan2( cg.refdef.width, x ) * 360 / M_PI;
+	}
+
 	x = cg.refdef.width / tan( fov_x / 360 * M_PI );
 	fov_y = atan2( cg.refdef.height, x );
 	fov_y = fov_y * 360 / M_PI;

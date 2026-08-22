@@ -407,6 +407,9 @@ typedef struct {
 	float yscale;
 	float xscale;
 	float bias;
+	float scale;        // uniform 2D scale for cg_fixedAspect
+	float ybias;
+	int fixedAspect;
 	int realTime;
 	int frameTime;
 	int cursorx;

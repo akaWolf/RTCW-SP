@@ -336,7 +336,7 @@ void CG_ShaderStateChanged( void ) {
 	char newShader[MAX_QPATH];
 	char timeOffset[16];
 	const char *o;
-	char *n,*t;
+	const char *n, *t;
 
 	o = CG_ConfigString( CS_SHADERSTATE );
 	while ( o && *o ) {

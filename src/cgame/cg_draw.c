@@ -283,7 +283,7 @@ static void CG_DrawField( int x, int y, int width, int value ) {
 	if ( l > width ) {
 		l = width;
 	}
-	x += 2 + CHAR_WIDTH * ( width - l );
+	x += 2 + HUD_CHAR_WIDTH * ( width - l );
 
 	ptr = num;
 	while ( *ptr && l )
@@ -294,8 +294,8 @@ static void CG_DrawField( int x, int y, int width, int value ) {
 			frame = *ptr - '0';
 		}
 
-		CG_DrawPic( x,y, CHAR_WIDTH, CHAR_HEIGHT, cgs.media.numberShaders[frame] );
-		x += CHAR_WIDTH;
+		CG_DrawPic( x,y, HUD_CHAR_WIDTH, HUD_CHAR_HEIGHT, cgs.media.numberShaders[frame] );
+		x += HUD_CHAR_WIDTH;
 		ptr++;
 		l--;
 	}
@@ -678,19 +678,19 @@ static void CG_DrawStatusBar( void ) {
 		origin[2] = 0;
 		angles[YAW] = 90 + 20 * sin( cg.time / 1000.0 );;
 //----(SA) Wolf statusbar change
-		CG_Draw3DModel( CHAR_WIDTH*3 + TEXT_ICON_SPACE, STATUSBARHEIGHT -20, ICON_SIZE, ICON_SIZE,
+		CG_Draw3DModel( HUD_CHAR_WIDTH*3 + TEXT_ICON_SPACE, STATUSBARHEIGHT -20, ICON_SIZE, ICON_SIZE,
 					   cg_weapons[ cent->currentState.weapon ].ammoModel, 0, origin, angles );
 //----(SA) end
 	}
 */
-	//CG_DrawStatusBarHead( 185 + CHAR_WIDTH*3 + TEXT_ICON_SPACE );
+	//CG_DrawStatusBarHead( 185 + HUD_CHAR_WIDTH*3 + TEXT_ICON_SPACE );
 
 	CG_DrawStatusBarKeys();
 
 	if ( cg.predictedPlayerState.powerups[PW_REDFLAG] ) {
-		CG_DrawStatusBarFlag( 185 + CHAR_WIDTH * 3 + TEXT_ICON_SPACE + ICON_SIZE, TEAM_RED );
+		CG_DrawStatusBarFlag( 185 + HUD_CHAR_WIDTH * 3 + TEXT_ICON_SPACE + ICON_SIZE, TEAM_RED );
 	} else if ( cg.predictedPlayerState.powerups[PW_BLUEFLAG] ) {
-		CG_DrawStatusBarFlag( 185 + CHAR_WIDTH * 3 + TEXT_ICON_SPACE + ICON_SIZE, TEAM_BLUE );
+		CG_DrawStatusBarFlag( 185 + HUD_CHAR_WIDTH * 3 + TEXT_ICON_SPACE + ICON_SIZE, TEAM_BLUE );
 	}
 
 	//----(SA) further change... we don't need to draw the armor do we?
@@ -701,7 +701,7 @@ static void CG_DrawStatusBar( void ) {
 		origin[2] = -10;
 		angles[YAW] = ( cg.time & 2047 ) * 360 / 2048.0;
 //----(SA) Wolf statusbar change
-//		CG_Draw3DModel( 370 + CHAR_WIDTH*3 + TEXT_ICON_SPACE, STATUSBARHEIGHT -20, ICON_SIZE, ICON_SIZE,
+//		CG_Draw3DModel( 370 + HUD_CHAR_WIDTH*3 + TEXT_ICON_SPACE, STATUSBARHEIGHT -20, ICON_SIZE, ICON_SIZE,
 //					   cgs.media.armorModel, 0, origin, angles );
 //----(SA) end
 	}
@@ -804,7 +804,7 @@ static void CG_DrawStatusBar( void ) {
 
 				icon = cg_weapons[ cg.predictedPlayerState.weapon ].ammoIcon;
 				if ( icon ) {
-					CG_DrawPic( CHAR_WIDTH * 3 + TEXT_ICON_SPACE, STATUSBARHEIGHT, ICON_SIZE, ICON_SIZE, icon );
+					CG_DrawPic( HUD_CHAR_WIDTH * 3 + TEXT_ICON_SPACE, STATUSBARHEIGHT, ICON_SIZE, ICON_SIZE, icon );
 				}
 			}
 		}
@@ -856,7 +856,7 @@ static void CG_DrawStatusBar( void ) {
 //----(SA) end
 		trap_R_SetColor( NULL );
 //----(SA) Wolf statusbar change
-//		CG_DrawPic( 370 + CHAR_WIDTH*3 + TEXT_ICON_SPACE, STATUSBARHEIGHT, ICON_SIZE, ICON_SIZE, cgs.media.armorIcon );
+//		CG_DrawPic( 370 + HUD_CHAR_WIDTH*3 + TEXT_ICON_SPACE, STATUSBARHEIGHT, ICON_SIZE, ICON_SIZE, cgs.media.armorIcon );
 //----(SA) end
 	}
 }
@@ -1423,7 +1423,7 @@ static float CG_DrawPowerups( float y ) {
 	}
 
 	// draw the icons and timers
-	x = 640 - ICON_SIZE - CHAR_WIDTH * 2;
+	x = 640 - ICON_SIZE - HUD_CHAR_WIDTH * 2;
 	for ( i = 0 ; i < active ; i++ ) {
 
 		continue;   // (SA) FIXME: TEMP: as I'm getting powerup business going

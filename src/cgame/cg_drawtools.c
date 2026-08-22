@@ -57,6 +57,26 @@ void CG_AdjustFrom640( float *x, float *y, float *w, float *h ) {
 	// -NERVE - SMF
 
 	// scale for screen sizes
+	if ( cg_fixedAspect.integer ) {
+		// elements spanning the whole virtual screen (backgrounds, fades) keep covering it,
+		// everything else is scaled uniformly and centered
+		if ( *x <= 0 && *x + *w >= 640 ) {
+			*x *= cgs.screenXScale;
+			*w *= cgs.screenXScale;
+		} else {
+			*x = *x * cgs.screenScale + cgs.screenXBias;
+			*w *= cgs.screenScale;
+		}
+		if ( *y <= 0 && *y + *h >= 480 ) {
+			*y *= cgs.screenYScale;
+			*h *= cgs.screenYScale;
+		} else {
+			*y = *y * cgs.screenScale + cgs.screenYBias;
+			*h *= cgs.screenScale;
+		}
+		return;
+	}
+
 	*x *= cgs.screenXScale;
 	*y *= cgs.screenYScale;
 	*w *= cgs.screenXScale;
@@ -232,14 +252,14 @@ Coords are virtual 640x480
 */
 void CG_DrawSides( float x, float y, float w, float h, float size ) {
 	CG_AdjustFrom640( &x, &y, &w, &h );
-	size *= cgs.screenXScale;
+	size *= cg_fixedAspect.integer ? cgs.screenScale : cgs.screenXScale;
 	trap_R_DrawStretchPic( x, y, size, h, 0, 0, 0, 0, cgs.media.whiteShader );
 	trap_R_DrawStretchPic( x + w - size, y, size, h, 0, 0, 0, 0, cgs.media.whiteShader );
 }
 
 void CG_DrawTopBottom( float x, float y, float w, float h, float size ) {
 	CG_AdjustFrom640( &x, &y, &w, &h );
-	size *= cgs.screenYScale;
+	size *= cg_fixedAspect.integer ? cgs.screenScale : cgs.screenYScale;
 	trap_R_DrawStretchPic( x, y, w, size, 0, 0, 0, 0, cgs.media.whiteShader );
 	trap_R_DrawStretchPic( x, y + h - size, w, size, 0, 0, 0, 0, cgs.media.whiteShader );
 }
@@ -1064,25 +1084,25 @@ static void UI_DrawBannerString2( int x, int y, const char* str, vec4_t color ) 
 	// draw the colored text
 	trap_R_SetColor( color );
 
-	ax = x * cgs.screenXScale + cgs.screenXBias;
-	ay = y * cgs.screenXScale;
+	ax = x * cgs.screenScale + cgs.screenXBias;
+	ay = y * cgs.screenScale + cgs.screenYBias;
 
 	s = str;
 	while ( *s )
 	{
 		ch = *s & 127;
 		if ( ch == ' ' ) {
-			ax += ( (float)PROPB_SPACE_WIDTH + (float)PROPB_GAP_WIDTH ) * cgs.screenXScale;
+			ax += ( (float)PROPB_SPACE_WIDTH + (float)PROPB_GAP_WIDTH ) * cgs.screenScale;
 		} else if ( Q_isupper( ch ) )     {
 			ch -= 'A';
 			fcol = (float)propMapB[ch][0] / 256.0f;
 			frow = (float)propMapB[ch][1] / 256.0f;
 			fwidth = (float)propMapB[ch][2] / 256.0f;
 			fheight = (float)PROPB_HEIGHT / 256.0f;
-			aw = (float)propMapB[ch][2] * cgs.screenXScale;
-			ah = (float)PROPB_HEIGHT * cgs.screenXScale;
+			aw = (float)propMapB[ch][2] * cgs.screenScale;
+			ah = (float)PROPB_HEIGHT * cgs.screenScale;
 			trap_R_DrawStretchPic( ax, ay, aw, ah, fcol, frow, fcol + fwidth, frow + fheight, cgs.media.charsetPropB );
-			ax += ( aw + (float)PROPB_GAP_WIDTH * cgs.screenXScale );
+			ax += ( aw + (float)PROPB_GAP_WIDTH * cgs.screenScale );
 		}
 		s++;
 	}
@@ -1171,28 +1191,28 @@ static void UI_DrawProportionalString2( int x, int y, const char* str, vec4_t co
 	// draw the colored text
 	trap_R_SetColor( color );
 
-	ax = x * cgs.screenXScale + cgs.screenXBias;
-	ay = y * cgs.screenXScale;
+	ax = x * cgs.screenScale + cgs.screenXBias;
+	ay = y * cgs.screenScale + cgs.screenYBias;
 
 	s = str;
 	while ( *s )
 	{
 		ch = *s & 127;
 		if ( ch == ' ' ) {
-			aw = (float)PROP_SPACE_WIDTH * cgs.screenXScale * sizeScale;
+			aw = (float)PROP_SPACE_WIDTH * cgs.screenScale * sizeScale;
 		} else if ( propMap[ch][2] != -1 ) {
 			fcol = (float)propMap[ch][0] / 256.0f;
 			frow = (float)propMap[ch][1] / 256.0f;
 			fwidth = (float)propMap[ch][2] / 256.0f;
 			fheight = (float)PROP_HEIGHT / 256.0f;
-			aw = (float)propMap[ch][2] * cgs.screenXScale * sizeScale;
-			ah = (float)PROP_HEIGHT * cgs.screenXScale * sizeScale;
+			aw = (float)propMap[ch][2] * cgs.screenScale * sizeScale;
+			ah = (float)PROP_HEIGHT * cgs.screenScale * sizeScale;
 			trap_R_DrawStretchPic( ax, ay, aw, ah, fcol, frow, fcol + fwidth, frow + fheight, charset );
 		} else {
 			aw = 0;
 		}
 
-		ax += ( aw + (float)PROP_GAP_WIDTH * cgs.screenXScale * sizeScale );
+		ax += ( aw + (float)PROP_GAP_WIDTH * cgs.screenScale * sizeScale );
 		s++;
 	}
 

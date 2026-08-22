@@ -170,6 +170,7 @@ vmCvar_t cg_autoswitch;
 vmCvar_t cg_ignore;
 vmCvar_t cg_simpleItems;
 vmCvar_t cg_fov;
+vmCvar_t cg_fixedAspect;
 vmCvar_t cg_zoomFov;
 vmCvar_t cg_zoomStepBinoc;
 vmCvar_t cg_zoomStepSniper;
@@ -301,7 +302,8 @@ cvarTable_t cvarTable[] = {
 	{ &cg_zoomStepSniper, "cg_zoomStepSniper", "2", CVAR_ARCHIVE },
 	{ &cg_zoomStepSnooper, "cg_zoomStepSnooper", "5", CVAR_ARCHIVE },
 	{ &cg_zoomStepFG, "cg_zoomStepFG", "10", CVAR_ARCHIVE },          //----(SA)	added
-	{ &cg_fov, "cg_fov", "90", CVAR_ARCHIVE | CVAR_CHEAT }, // JPW NERVE added cheat protect	NOTE: there is already a dmflag (DF_FIXED_FOV) to allow server control of this cheat
+	{ &cg_fixedAspect, "cg_fixedAspect", "1", CVAR_ARCHIVE | CVAR_LATCH },
+	{ &cg_fov, "cg_fov", "90", CVAR_ARCHIVE },     // single player: no reason to cheat protect the field of view // JPW NERVE added cheat protect	NOTE: there is already a dmflag (DF_FIXED_FOV) to allow server control of this cheat
 	{ &cg_viewsize, "cg_viewsize", "100", CVAR_ARCHIVE },
 	{ &cg_letterbox, "cg_letterbox", "0", CVAR_TEMP },    //----(SA)	added
 	{ &cg_stereoSeparation, "cg_stereoSeparation", "0.4", CVAR_ARCHIVE  },
@@ -565,7 +567,7 @@ void QDECL CG_DPrintf( const char *msg, ... ) {
 	char text[1024];
 
 	va_start( argptr, msg );
-	vsprintf( text, msg, argptr );
+	vsnprintf( text, sizeof( text ), msg, argptr );
 	va_end( argptr );
 
 	trap_DPrint( text );
@@ -576,7 +578,7 @@ void QDECL CG_Printf( const char *msg, ... ) {
 	char text[1024];
 
 	va_start( argptr, msg );
-	vsprintf( text, msg, argptr );
+	vsnprintf( text, sizeof( text ), msg, argptr );
 	va_end( argptr );
 
 	trap_Print( text );
@@ -587,7 +589,7 @@ void QDECL CG_Error( const char *msg, ... ) {
 	char text[1024];
 
 	va_start( argptr, msg );
-	vsprintf( text, msg, argptr );
+	vsnprintf( text, sizeof( text ), msg, argptr );
 	va_end( argptr );
 
 	trap_Error( text );
@@ -602,7 +604,7 @@ void QDECL Com_Error( int level, const char *error, ... ) {
 	char text[1024];
 
 	va_start( argptr, error );
-	vsprintf( text, error, argptr );
+	vsnprintf( text, sizeof( text ), error, argptr );
 	va_end( argptr );
 
 	CG_Error( "%s", text );
@@ -613,7 +615,7 @@ void QDECL Com_Printf( const char *msg, ... ) {
 	char text[1024];
 
 	va_start( argptr, msg );
-	vsprintf( text, msg, argptr );
+	vsnprintf( text, sizeof( text ), msg, argptr );
 	va_end( argptr );
 
 	CG_Printf( "%s", text );
@@ -2344,6 +2346,16 @@ void CG_Init( int serverMessageNum, int serverCommandSequence ) {
 	trap_GetGlconfig( &cgs.glconfig );
 	cgs.screenXScale = cgs.glconfig.vidWidth / 640.0;
 	cgs.screenYScale = cgs.glconfig.vidHeight / 480.0;
+
+	// cg_fixedAspect: scale the 640x480 layout uniformly and center it
+	cgs.screenScale = cgs.screenXScale;
+	cgs.screenXBias = 0;
+	cgs.screenYBias = 0;
+	if ( cg_fixedAspect.integer ) {
+		cgs.screenScale = cgs.screenXScale < cgs.screenYScale ? cgs.screenXScale : cgs.screenYScale;
+		cgs.screenXBias = 0.5 * ( cgs.glconfig.vidWidth - 640 * cgs.screenScale );
+		cgs.screenYBias = 0.5 * ( cgs.glconfig.vidHeight - 480 * cgs.screenScale );
+	}
 
 	// get the gamestate from the client system
 	trap_GetGameState( &cgs.gameState );
