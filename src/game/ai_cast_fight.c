@@ -268,7 +268,9 @@ int AICast_ScanForEnemies( cast_state_t *cs, int *enemies ) {
 		sortedEnemies[j] = enemies[best];
 		distances[best] = -1;
 	}
-	memcpy( enemies, sortedEnemies, sizeof( int ) * enemyCount );
+	if ( enemyCount > 0 ) {
+		memcpy( enemies, sortedEnemies, sizeof( int ) * enemyCount );
+	}
 
 	// if we are not in combat mode, then an enemy should trigger a state change straight to combat mode
 	if ( !queryCount && !friendlyAlertCount && enemyCount && cs->aiState < AISTATE_COMBAT ) {

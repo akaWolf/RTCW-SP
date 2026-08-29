@@ -1102,10 +1102,10 @@ qboolean IsBinaryMoverBlocked( gentity_t *ent, gentity_t *other, gentity_t *acti
 
 		//----(SA)	only check for blockage by players
 		if ( !activator ) {
-			if ( Q_stricmp( other->classname, "target_relay" ) == 0 ) {
+			if ( other && Q_stricmp( other->classname, "target_relay" ) == 0 ) {
 				is_relay = qtrue;
-			} else if ( !activator->client )      {
-				return qfalse;
+			} else {
+				return qfalse;      // nobody to check the blockage against
 			}
 		}
 		//----(SA)	end
@@ -1426,10 +1426,8 @@ void Use_BinaryMover( gentity_t *ent, gentity_t *other, gentity_t *activator ) {
 
 		ent->s.loopSound = 0;
 
-		// looping sound
+		// looping sound while moving, like the other state changes
 		if ( !nosound ) {
-			ent->s.loopSound = ent->sound2to3;
-		} else if ( !nosound ) {
 			ent->s.loopSound = ent->soundLoop;
 		}
 

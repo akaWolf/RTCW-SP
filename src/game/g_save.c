@@ -140,6 +140,7 @@ static saveField_t gentityFields_18[] = {
 
 static saveField_t gclientFields[] = {
 	{CFOFS( hook ),       F_ENTITY},
+	{CFOFS( persistantPowerup ), F_ENTITY},
 
 	{0, 0}
 };
@@ -192,6 +193,8 @@ static ignoreField_t gclientIgnoreFields[] = {
 
 	// camera views are not resumed after loading, and a saved entity address is meaningless
 	{CFOFS( cameraPortal ),   sizeof( gentity_t * )},
+	// set again by ClientUserinfoChanged, a saved pointer is meaningless
+	{CFOFS( modelInfo ),      sizeof( animModelInfo_t * )},
 
 	{0, 0}
 };
