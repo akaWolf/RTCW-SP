@@ -803,7 +803,6 @@ typedef struct model_s {
 	int numLods;
 
 // GR - model tessellation capability flag
-	int ATI_tess;
 } model_t;
 
 
@@ -860,9 +859,11 @@ new:
 #define QSORT_SHADERNUM_SHIFT   20
 #define QSORT_ENTITYNUM_SHIFT   10
 #define QSORT_FOGNUM_SHIFT      2
+#if MAX_MAP_FOGS > ( 1 << ( QSORT_ENTITYNUM_SHIFT - QSORT_FOGNUM_SHIFT ) )
+#error MAX_MAP_FOGS does not fit into the drawSurf sort key
+#endif
 
 // GR - tessellation flag in bit 8
-#define QSORT_ATI_TESS_SHIFT    8
 
 #if MAX_SHADERS > ( 1 << ( 32 - QSORT_SHADERNUM_SHIFT ) )
 #error MAX_SHADERS does not fit into the drawSurf sort key
@@ -871,8 +872,6 @@ new:
 #error MAX_ENTITIES does not fit into the drawSurf sort key
 #endif
 // GR - TruForm flags
-#define ATI_TESS_TRUFORM    1
-#define ATI_TESS_NONE       0
 
 extern int gl_filter_min, gl_filter_max;
 extern float glMaxAnisotropy;      // 0 when GL_EXT_texture_filter_anisotropic is unavailable or disabled
@@ -1133,10 +1132,6 @@ extern cvar_t   *r_ext_compiled_vertex_array;
 extern cvar_t   *r_ext_max_anisotropy;
 extern cvar_t   *r_ext_texture_env_add;
 //----(SA)	added
-extern cvar_t   *r_ext_ATI_pntriangles;
-extern cvar_t   *r_ati_truform_tess;
-extern cvar_t   *r_ati_truform_pointmode;   //----(SA)
-extern cvar_t   *r_ati_truform_normalmode;  //----(SA)
 extern cvar_t   *r_ati_fsaa_samples;        //DAJ
 extern cvar_t   *r_ext_texture_filter_anisotropic;
 extern cvar_t   *r_ext_NV_fog_dist;
@@ -1242,10 +1237,10 @@ void R_AddPolygonSurfaces( void );
 
 // GR - add tessellation flag
 void R_DecomposeSort( unsigned sort, int *entityNum, shader_t **shader,
-					  int *fogNum, int *dlightMap, int *atiTess );
+					  int *fogNum, int *dlightMap );
 
 // GR - add tessellation flag
-void R_AddDrawSurf( surfaceType_t *surface, shader_t *shader, int fogIndex, int dlightMap, int atiTess );
+void R_AddDrawSurf( surfaceType_t *surface, shader_t *shader, int fogIndex, int dlightMap );
 
 
 #define CULL_IN     0       // completely unclipped
@@ -1440,7 +1435,6 @@ typedef struct shaderCommands_s
 	int numIndexes;
 	int numVertexes;
 
-	qboolean ATI_tess;
 
 	// info extracted from current shader
 	int numPasses;

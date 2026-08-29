@@ -107,10 +107,6 @@ cvar_t  *r_ext_texture_filter_anisotropic;
 cvar_t  *r_ext_NV_fog_dist;
 cvar_t  *r_nv_fogdist_mode;
 
-cvar_t  *r_ext_ATI_pntriangles;
-cvar_t  *r_ati_truform_tess;        //
-cvar_t  *r_ati_truform_normalmode;  // linear/quadratic
-cvar_t  *r_ati_truform_pointmode;   // linear/cubic
 //----(SA)	end
 
 cvar_t  *r_ati_fsaa_samples;        //DAJ valids are 1, 2, 4
@@ -186,8 +182,6 @@ cvar_t  *r_saveFontData;
 cvar_t  *r_cache;
 cvar_t  *r_cacheShaders;
 cvar_t  *r_cacheModels;
-cvar_t  *r_compressModels;
-cvar_t  *r_exportCompressedModels;
 
 cvar_t  *r_cacheGathering;
 
@@ -215,44 +209,6 @@ void ( APIENTRY * qglClientActiveTextureARB )( GLenum texture );
 void ( APIENTRY * qglLockArraysEXT )( GLint, GLint );
 void ( APIENTRY * qglUnlockArraysEXT )( void );
 
-//----(SA)	added
-void ( APIENTRY * qglPNTrianglesiATI )( GLenum pname, GLint param );
-void ( APIENTRY * qglPNTrianglesfATI )( GLenum pname, GLfloat param );
-/*
-The tessellation level and normal generation mode are specified with:
-
-	void qglPNTriangles{if}ATI(enum pname, T param)
-
-	If <pname> is:
-		GL_PN_TRIANGLES_NORMAL_MODE_ATI -
-			<param> must be one of the symbolic constants:
-				- GL_PN_TRIANGLES_NORMAL_MODE_LINEAR_ATI or
-				- GL_PN_TRIANGLES_NORMAL_MODE_QUADRATIC_ATI
-			which will select linear or quadratic normal interpolation respectively.
-		GL_PN_TRIANGLES_POINT_MODE_ATI -
-			<param> must be one of the symbolic  constants:
-				- GL_PN_TRIANGLES_POINT_MODE_LINEAR_ATI or
-				- GL_PN_TRIANGLES_POINT_MODE_CUBIC_ATI
-			which will select linear or cubic interpolation respectively.
-		GL_PN_TRIANGLES_TESSELATION_LEVEL_ATI -
-			<param> should be a value specifying the number of evaluation points on each edge.  This value must be
-			greater than 0 and less than or equal to the value given by GL_MAX_PN_TRIANGLES_TESSELATION_LEVEL_ATI.
-
-	An INVALID_VALUE error will be generated if the value for <param> is less than zero or greater than the max value.
-
-Associated 'gets':
-Get Value                               Get Command Type     Minimum Value								Attribute
----------                               ----------- ----     ------------								---------
-PN_TRIANGLES_ATI						IsEnabled   B		False                                       PN Triangles/enable
-PN_TRIANGLES_NORMAL_MODE_ATI			GetIntegerv Z2		PN_TRIANGLES_NORMAL_MODE_QUADRATIC_ATI		PN Triangles
-PN_TRIANGLES_POINT_MODE_ATI				GetIntegerv Z2		PN_TRIANGLES_POINT_MODE_CUBIC_ATI			PN Triangles
-PN_TRIANGLES_TESSELATION_LEVEL_ATI		GetIntegerv Z+		1											PN Triangles
-MAX_PN_TRIANGLES_TESSELATION_LEVEL_ATI	GetIntegerv Z+		1											-
-
-
-
-
-*/
 //----(SA)	end
 
 
@@ -872,25 +828,6 @@ void GL_SetDefaultState( void ) {
 	qglDisable( GL_CULL_FACE );
 	qglDisable( GL_BLEND );
 
-//----(SA)	added.
-	// ATI pn_triangles
-	if ( qglPNTrianglesiATI ) {
-		int maxtess;
-		// get max supported tesselation
-		qglGetIntegerv( GL_MAX_PN_TRIANGLES_TESSELATION_LEVEL_ATI, (GLint*)&maxtess );
-#ifdef __MACOS__
-		glConfig.ATIMaxTruformTess = 7;
-#else
-		glConfig.ATIMaxTruformTess = maxtess;
-#endif
-		// cap if necessary
-		if ( r_ati_truform_tess->value > maxtess ) {
-			ri.Cvar_Set( "r_ati_truform_tess", va( "%d", maxtess ) );
-		}
-
-		// set Wolf defaults
-		qglPNTrianglesiATI( GL_PN_TRIANGLES_TESSELATION_LEVEL_ATI, r_ati_truform_tess->value );
-	}
 
 	if ( glConfig.anisotropicAvailable ) {
 		float maxAnisotropy;
@@ -996,13 +933,6 @@ void GfxInfo_f( void ) {
 	ri.Printf( PRINT_ALL, "texenv add: %s\n", enablestrings[glConfig.textureEnvAddAvailable != 0] );
 	ri.Printf( PRINT_ALL, "compressed textures: %s\n", enablestrings[glConfig.textureCompression != TC_NONE] );
 
-	ri.Printf( PRINT_ALL, "ATI truform: %s\n", enablestrings[qglPNTrianglesiATI != 0] );
-	if ( qglPNTrianglesiATI ) {
-//DAJ bogus at this point		ri.Printf( PRINT_ALL, "MAX_PN_TRIANGLES_TESSELATION_LEVEL_ATI: %d\n", glConfig.ATIMaxTruformTess );
-		ri.Printf( PRINT_ALL, "Truform Tess: %d\n", r_ati_truform_tess->integer );
-		ri.Printf( PRINT_ALL, "Truform Point Mode: %s\n", r_ati_truform_pointmode->string );
-		ri.Printf( PRINT_ALL, "Truform Normal Mode: %s\n", r_ati_truform_normalmode->string );
-	}
 
 	ri.Printf( PRINT_ALL, "NV distance fog: %s\n", enablestrings[glConfig.NVFogAvailable != 0] );
 	if ( glConfig.NVFogAvailable ) {
@@ -1047,12 +977,6 @@ void R_Register( void ) {
 	r_ext_max_anisotropy = ri.Cvar_Get( "r_ext_max_anisotropy", "16", CVAR_ARCHIVE );
 	r_glIgnoreWicked3D = ri.Cvar_Get( "r_glIgnoreWicked3D", "0", CVAR_ARCHIVE | CVAR_LATCH );
 
-//----(SA)	added
-	r_ext_ATI_pntriangles           = ri.Cvar_Get( "r_ext_ATI_pntriangles", "0", CVAR_ARCHIVE | CVAR_LATCH );   //----(SA)	default to '0'
-	r_ati_truform_tess              = ri.Cvar_Get( "r_ati_truform_tess", "1", CVAR_ARCHIVE );
-// GR - Change default mode -- linear doesn't do much...
-	r_ati_truform_normalmode        = ri.Cvar_Get( "r_ati_truform_normalmode", "QUADRATIC", CVAR_ARCHIVE );
-	r_ati_truform_pointmode         = ri.Cvar_Get( "r_ati_truform_pointmode", "CUBIC", CVAR_ARCHIVE );
 
 	r_ati_fsaa_samples              = ri.Cvar_Get( "r_ati_fsaa_samples", "1", CVAR_ARCHIVE );       //DAJ valids are 1, 2, 4
 
@@ -1179,8 +1103,6 @@ void R_Register( void ) {
 //----(SA)	end
 
 	r_cacheModels = ri.Cvar_Get( "r_cacheModels", "1", CVAR_LATCH );
-	r_compressModels = ri.Cvar_Get( "r_compressModels", "0", 0 );     // converts MD3 -> MDC at run-time
-	r_exportCompressedModels = ri.Cvar_Get( "r_exportCompressedModels", "0", 0 ); // saves compressed models
 	r_cacheGathering = ri.Cvar_Get( "cl_cacheGathering", "0", 0 );
 	r_buildScript = ri.Cvar_Get( "com_buildscript", "0", 0 );
 	r_bonesDebug = ri.Cvar_Get( "r_bonesDebug", "0", CVAR_CHEAT );

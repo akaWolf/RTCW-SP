@@ -147,15 +147,6 @@ typedef void ( APIENTRY * PFNGLCLIENTACTIVETEXTUREARBPROC )( GLenum target );
 #define GL_ATI_pn_triangles 1
 
 // GR - update enumerants
-#define GL_PN_TRIANGLES_ATI                         0x87F0
-#define GL_MAX_PN_TRIANGLES_TESSELATION_LEVEL_ATI   0x87F1
-#define GL_PN_TRIANGLES_POINT_MODE_ATI              0x87F2
-#define GL_PN_TRIANGLES_NORMAL_MODE_ATI             0x87F3
-#define GL_PN_TRIANGLES_TESSELATION_LEVEL_ATI       0x87F4
-#define GL_PN_TRIANGLES_POINT_MODE_LINEAR_ATI       0x87F5
-#define GL_PN_TRIANGLES_POINT_MODE_CUBIC_ATI        0x87F6
-#define GL_PN_TRIANGLES_NORMAL_MODE_LINEAR_ATI      0x87F7
-#define GL_PN_TRIANGLES_NORMAL_MODE_QUADRATIC_ATI   0x87F8
 
 typedef void ( APIENTRY * PFNGLPNTRIANGLESIATIPROC )( GLenum pname, GLint param );
 typedef void ( APIENTRY * PFNGLPNTRIANGLESFATIPROC )( GLenum pname, GLfloat param );
@@ -195,8 +186,6 @@ extern void ( APIENTRY * qglLockArraysEXT )( GLint, GLint );
 extern void ( APIENTRY * qglUnlockArraysEXT )( void );
 
 //----(SA)	added
-extern void ( APIENTRY * qglPNTrianglesiATI )( GLenum pname, GLint param );
-extern void ( APIENTRY * qglPNTrianglesfATI )( GLenum pname, GLfloat param );
 //----(SA)	end
 
 //===========================================================================

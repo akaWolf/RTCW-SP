@@ -40,8 +40,6 @@ static qboolean R_LoadMDS( model_t *mod, void *buffer, const char *name );
 
 model_t *loadmodel;
 
-extern cvar_t *r_compressModels;
-extern cvar_t *r_exportCompressedModels;
 extern cvar_t *r_buildScript;
 
 /*
@@ -140,13 +138,6 @@ qhandle_t RE_RegisterModel( const char *name ) {
 	// only set the name after the model has been successfully loaded
 	Q_strncpyz( mod->name, name, sizeof( mod->name ) );
 
-// GR - by default models are not tessellated
-	mod->ATI_tess = qfalse;
-// GR - check if can be tessellated...
-//		make sure to tessellate model heads
-	if ( strstr( name, "head" ) ) {
-		mod->ATI_tess = qtrue;
-	}
 
 	// make sure the render thread is stopped
 	R_SyncRenderThread();
@@ -198,19 +189,11 @@ qhandle_t RE_RegisterModel( const char *name ) {
 			strcat( filename, namebuf );
 		}
 
-		if ( r_compressModels->integer ) {
-			filename[strlen( filename ) - 1] = '3';  // try MD3 first
-		} else {
-			filename[strlen( filename ) - 1] = 'c';  // try MDC first
-		}
+		filename[strlen( filename ) - 1] = 'c';  // try MDC first
 		ri.FS_ReadFile( filename, (void **)&buf );
 
 		if ( !buf ) {
-			if ( r_compressModels->integer ) {
-				filename[strlen( filename ) - 1] = 'c';  // try MDC second
-			} else {
-				filename[strlen( filename ) - 1] = '3';  // try MD3 second
-			}
+			filename[strlen( filename ) - 1] = '3';  // try MD3 second
 			ri.FS_ReadFile( filename, (void **)&buf );
 			if ( !buf ) {
 				continue;
@@ -228,15 +211,6 @@ qhandle_t RE_RegisterModel( const char *name ) {
 
 		if ( ident == MD3_IDENT ) {
 			loaded = R_LoadMD3( mod, lod, buf, name );
-			if ( r_compressModels->integer && r_exportCompressedModels->integer && mod->mdc[lod] ) {
-				// save it out
-				filename[strlen( filename ) - 1] = 'c';
-				ri.FS_WriteFile( filename, mod->mdc[lod], mod->mdc[lod]->ofsEnd );
-				// if building, open the file so it gets copied
-				if ( r_buildScript->integer ) {
-					ri.FS_ReadFile( filename, NULL );
-				}
-			}
 		} else {
 			loaded = R_LoadMDC( mod, lod, buf, name );
 		}
@@ -387,32 +361,6 @@ unsigned char R_MDC_GetAnorm( const vec3_t dir ) {
 
 /*
 =================
-R_MDC_EncodeOfsVec
-=================
-*/
-qboolean R_MDC_EncodeXyzCompressed( const vec3_t vec, const vec3_t normal, mdcXyzCompressed_t *out ) {
-	mdcXyzCompressed_t retval;
-	int i;
-	unsigned char anorm;
-
-	i = sizeof( mdcXyzCompressed_t );
-
-	retval.ofsVec = 0;
-	for ( i = 0; i < 3; i++ ) {
-		if ( fabs( vec[i] ) >= MDC_MAX_DIST ) {
-			return qfalse;
-		}
-		retval.ofsVec += ( ( (int)fabs( ( vec[i] + MDC_DIST_SCALE * 0.5 ) * ( 1.0 / MDC_DIST_SCALE ) + MDC_MAX_OFS ) ) << ( i * MDC_BITS_PER_AXIS ) );
-	}
-	anorm = R_MDC_GetAnorm( normal );
-	retval.ofsVec |= ( (int)anorm ) << 24;
-
-	*out = retval;
-	return qtrue;
-}
-
-/*
-=================
 R_MDC_DecodeXyzCompressed
 =================
 */
@@ -426,284 +374,6 @@ void R_MDC_DecodeXyzCompressed( mdcXyzCompressed_t *xyzComp, vec3_t out, vec3_t 
 	R_MDC_GetVec( ( unsigned char )( xyzComp->ofsVec >> 24 ), normal );
 }
 #endif
-
-/*
-=================
-R_MDC_GetXyzCompressed
-=================
-*/
-static qboolean R_MDC_GetXyzCompressed( md3Header_t *md3, md3XyzNormal_t *newXyz, vec3_t oldPos, mdcXyzCompressed_t *out, qboolean verify ) {
-	vec3_t newPos, vec;
-	int i;
-	vec3_t pos, dir, norm, outnorm;
-
-	for ( i = 0; i < 3; i++ ) {
-		newPos[i] = (float)newXyz->xyz[i] * MD3_XYZ_SCALE;
-	}
-
-	VectorSubtract( newPos, oldPos, vec );
-	R_LatLongToNormal( norm, newXyz->normal );
-	if ( !R_MDC_EncodeXyzCompressed( vec, norm, out ) ) {
-		return qfalse;
-	}
-
-	// calculate the uncompressed position
-	R_MDC_DecodeXyzCompressed( out->ofsVec, dir, outnorm );
-	VectorAdd( oldPos, dir, pos );
-
-	if ( verify ) {
-		if ( Distance( newPos, pos ) > MDC_MAX_ERROR ) {
-			return qfalse;
-		}
-	}
-
-	return qtrue;
-}
-
-
-/*
-=================
-R_MDC_CompressSurfaceFrame
-=================
-*/
-static qboolean R_MDC_CompressSurfaceFrame( md3Header_t *md3, md3Surface_t *surf, int frame, int lastBaseFrame, mdcXyzCompressed_t *out ) {
-	int i, j;
-	md3XyzNormal_t  *xyz, *baseXyz;
-	vec3_t oldPos;
-
-	xyz = ( md3XyzNormal_t * )( (byte *)surf + surf->ofsXyzNormals );
-	baseXyz = xyz + ( lastBaseFrame * surf->numVerts );
-	xyz += ( frame * surf->numVerts );
-
-	for ( i = 0; i < surf->numVerts; i++ ) {
-		for ( j = 0; j < 3; j++ ) {
-			oldPos[j] = (float)baseXyz[i].xyz[j] * MD3_XYZ_SCALE;
-		}
-		if ( !R_MDC_GetXyzCompressed( md3, &xyz[i], oldPos, &out[i], qtrue ) ) {
-			return qfalse;
-		}
-	}
-
-	return qtrue;
-}
-
-/*
-=================
-R_MDC_CanCompressSurfaceFrame
-=================
-*/
-static qboolean R_MDC_CanCompressSurfaceFrame( md3Header_t *md3, md3Surface_t *surf, int frame, int lastBaseFrame ) {
-	int i, j;
-	md3XyzNormal_t  *xyz, *baseXyz;
-	mdcXyzCompressed_t xyzComp;
-	vec3_t oldPos;
-
-	xyz = ( md3XyzNormal_t * )( (byte *)surf + surf->ofsXyzNormals );
-	baseXyz = xyz + ( lastBaseFrame * surf->numVerts );
-	xyz += ( frame * surf->numVerts );
-
-	for ( i = 0; i < surf->numVerts; i++ ) {
-		for ( j = 0; j < 3; j++ ) {
-			oldPos[j] = (float)baseXyz[i].xyz[j] * MD3_XYZ_SCALE;
-		}
-		if ( !R_MDC_GetXyzCompressed( md3, &xyz[i], oldPos, &xyzComp, qtrue ) ) {
-			return qfalse;
-		}
-	}
-
-	return qtrue;
-}
-
-/*
-=================
-R_MD3toMDC
-
-  Converts a model_t from md3 to mdc format
-=================
-*/
-static qboolean R_MDC_ConvertMD3( model_t *mod, int lod, const char *mod_name ) {
-	int i, j, f, c, k;
-	md3Surface_t        *surf;
-	md3Header_t         *md3;
-	int                 *baseFrames;
-	int numBaseFrames;
-
-	qboolean foundBase;
-
-	mdcHeader_t         *mdc, mdcHeader;
-	mdcSurface_t        *cSurf;
-	short               *frameBaseFrames, *frameCompFrames;
-
-	mdcTag_t            *mdcTag;
-	md3Tag_t            *md3Tag;
-
-	vec3_t axis[3], angles;
-	float ftemp;
-
-	md3 = mod->md3[lod];
-
-	baseFrames = ri.Hunk_AllocateTempMemory( sizeof( *baseFrames ) * md3->numFrames );
-
-	// the first frame is always a base frame
-	numBaseFrames = 0;
-	memset( baseFrames, 0, sizeof( *baseFrames ) * md3->numFrames );
-	baseFrames[numBaseFrames++] = 0;
-
-	// first calculate how many baseframes we need, and which frames they are on
-	// we need to treat the entire model as a single surface, if we compress some surfaces, and not others,
-	// we may get tearing between surfaces
-
-	for ( f = 1; f < md3->numFrames; f++ ) {
-
-		surf = ( md3Surface_t * )( (byte *)md3 + md3->ofsSurfaces );
-		foundBase = qfalse;
-		for ( i = 0 ; i < md3->numSurfaces ; i++ ) {
-
-			// process the verts in this surface, checking to see if the compressed
-			// version will be close enough to the actual vert
-			if ( !foundBase && !R_MDC_CanCompressSurfaceFrame( md3, surf, f, baseFrames[numBaseFrames - 1] ) ) {
-				baseFrames[numBaseFrames++] = f;
-				foundBase = qtrue;
-			}
-
-			// find the next surface
-			surf = ( md3Surface_t * )( (byte *)surf + surf->ofsEnd );
-		}
-
-	}
-
-	// success, so fill in the necessary data to the model_t
-	mdcHeader.ident = MDC_IDENT;
-	mdcHeader.version = MDC_VERSION;
-	Q_strncpyz( mdcHeader.name, md3->name, sizeof( mdcHeader.name ) );
-	mdcHeader.flags = md3->flags;
-	mdcHeader.numFrames = md3->numFrames;
-	mdcHeader.numTags = md3->numTags;
-	mdcHeader.numSurfaces = md3->numSurfaces;
-	mdcHeader.numSkins = md3->numSkins;
-	mdcHeader.ofsFrames = sizeof( mdcHeader_t );
-	mdcHeader.ofsTagNames = mdcHeader.ofsFrames + mdcHeader.numFrames * sizeof( md3Frame_t );
-	mdcHeader.ofsTags = mdcHeader.ofsTagNames + mdcHeader.numTags * sizeof( mdcTagName_t );
-	mdcHeader.ofsSurfaces = mdcHeader.ofsTags + mdcHeader.numTags * mdcHeader.numFrames * sizeof( mdcTag_t );
-	mdcHeader.ofsEnd = mdcHeader.ofsSurfaces;
-
-	surf = ( md3Surface_t * )( (byte *)md3 + md3->ofsSurfaces );
-	for ( f = 0; f < md3->numSurfaces; f++ ) {
-		mdcHeader.ofsEnd += sizeof( mdcSurface_t )
-							+ surf->numShaders * sizeof( md3Shader_t )
-							+ surf->numTriangles * sizeof( md3Triangle_t )
-							+ surf->numVerts * sizeof( md3St_t )
-							+ surf->numVerts * numBaseFrames * sizeof( md3XyzNormal_t )
-							+ surf->numVerts * ( md3->numFrames - numBaseFrames ) * sizeof( mdcXyzCompressed_t )
-							+ sizeof( short ) * md3->numFrames
-							+ sizeof( short ) * md3->numFrames;
-
-		surf = ( md3Surface_t * )( (byte *)surf + surf->ofsEnd );
-	}
-
-	// report the memory differences
-	Com_Printf( "Compressed %s. Old = %i, New = %i\n", mod_name, md3->ofsEnd, mdcHeader.ofsEnd );
-
-	mdc = ri.Hunk_Alloc( mdcHeader.ofsEnd, h_low );
-	mod->mdc[lod] = mdc;
-
-	// we have the memory allocated, so lets fill it in
-
-	// header info
-	*mdc = mdcHeader;
-	// frames
-	memcpy( ( md3Frame_t * )( (byte *)mdc + mdc->ofsFrames ), ( md3Frame_t * )( (byte *)md3 + md3->ofsFrames ), mdcHeader.numFrames * sizeof( md3Frame_t ) );
-	// tag names
-	for ( j = 0; j < md3->numTags; j++ ) {
-		memcpy( ( mdcTagName_t * )( (byte *)mdc + mdc->ofsTagNames ) + j, ( ( md3Tag_t * )( (byte *)md3 + md3->ofsTags ) + j )->name, sizeof( mdcTagName_t ) );
-	}
-	// tags
-	mdcTag = ( ( mdcTag_t * )( (byte *)mdc + mdc->ofsTags ) );
-	md3Tag = ( ( md3Tag_t * )( (byte *)md3 + md3->ofsTags ) );
-	for ( f = 0; f < md3->numFrames; f++ ) {
-		for ( j = 0; j < md3->numTags; j++, mdcTag++, md3Tag++ ) {
-			for ( k = 0; k < 3; k++ ) {
-				// origin
-				ftemp = md3Tag->origin[k] / MD3_XYZ_SCALE;
-				mdcTag->xyz[k] = (short)ftemp;
-				// axis
-				VectorCopy( md3Tag->axis[k], axis[k] );
-			}
-			// convert the axis to angles
-			AxisToAngles( axis, angles );
-			// copy them into the new tag
-			for ( k = 0; k < 3; k++ ) {
-				mdcTag->angles[k] = angles[k] / MDC_TAG_ANGLE_SCALE;
-			}
-		}
-	}
-	// surfaces
-	surf = ( md3Surface_t * )( (byte *)md3 + md3->ofsSurfaces );
-	cSurf = ( mdcSurface_t * )( (byte *)mdc + mdc->ofsSurfaces );
-	for ( j = 0 ; j < md3->numSurfaces ; j++ ) {
-
-		cSurf->ident = SF_MDC;
-		Q_strncpyz( cSurf->name, surf->name, sizeof( cSurf->name ) );
-		cSurf->flags = surf->flags;
-		cSurf->numCompFrames = ( mdc->numFrames - numBaseFrames );
-		cSurf->numBaseFrames = numBaseFrames;
-		cSurf->numShaders = surf->numShaders;
-		cSurf->numVerts = surf->numVerts;
-		cSurf->numTriangles = surf->numTriangles;
-		cSurf->ofsTriangles = sizeof( mdcSurface_t );
-		cSurf->ofsShaders = cSurf->ofsTriangles + cSurf->numTriangles * sizeof( md3Triangle_t );
-		cSurf->ofsSt = cSurf->ofsShaders + cSurf->numShaders * sizeof( md3Shader_t );
-		cSurf->ofsXyzNormals = cSurf->ofsSt + cSurf->numVerts * sizeof( md3St_t );
-		cSurf->ofsXyzCompressed = cSurf->ofsXyzNormals + cSurf->numVerts * numBaseFrames * sizeof( md3XyzNormal_t );
-		cSurf->ofsFrameBaseFrames = cSurf->ofsXyzCompressed + cSurf->numVerts * ( mdc->numFrames - numBaseFrames ) * sizeof( mdcXyzCompressed_t );
-		cSurf->ofsFrameCompFrames = cSurf->ofsFrameBaseFrames + mdc->numFrames * sizeof( short );
-		cSurf->ofsEnd = cSurf->ofsFrameCompFrames + mdc->numFrames * sizeof( short );
-
-		// triangles
-		memcpy( (byte *)cSurf + cSurf->ofsTriangles, (byte *)surf + surf->ofsTriangles, cSurf->numTriangles * sizeof( md3Triangle_t ) );
-		// shaders
-		memcpy( (byte *)cSurf + cSurf->ofsShaders, (byte *)surf + surf->ofsShaders, cSurf->numShaders * sizeof( md3Shader_t ) );
-		// st
-		memcpy( (byte *)cSurf + cSurf->ofsSt, (byte *)surf + surf->ofsSt, cSurf->numVerts * sizeof( md3St_t ) );
-
-		// rest
-		frameBaseFrames = ( short * )( (byte *)cSurf + cSurf->ofsFrameBaseFrames );
-		frameCompFrames = ( short * )( (byte *)cSurf + cSurf->ofsFrameCompFrames );
-		for ( f = 0, i = 0, c = 0; f < md3->numFrames; f++ ) {
-			if ( i < numBaseFrames && f == baseFrames[i] ) {
-				// copy this baseFrame from the md3
-				memcpy( (byte *)cSurf + cSurf->ofsXyzNormals + ( sizeof( md3XyzNormal_t ) * cSurf->numVerts * i ),
-						(byte *)surf + surf->ofsXyzNormals + ( sizeof( md3XyzNormal_t ) * cSurf->numVerts * f ),
-						sizeof( md3XyzNormal_t ) * cSurf->numVerts );
-				i++;
-				frameCompFrames[f] = -1;
-				frameBaseFrames[f] = i - 1;
-			} else {
-				if ( !R_MDC_CompressSurfaceFrame( md3, surf, f, baseFrames[i - 1], ( mdcXyzCompressed_t * )( (byte *)cSurf + cSurf->ofsXyzCompressed + sizeof( mdcXyzCompressed_t ) * cSurf->numVerts * c ) ) ) {
-					ri.Error( ERR_DROP, "R_MDC_ConvertMD3: tried to compress an unsuitable frame\n" );
-				}
-				frameCompFrames[f] = c;
-				frameBaseFrames[f] = i - 1;
-				c++;
-			}
-		}
-
-		// find the next surface
-		surf = ( md3Surface_t * )( (byte *)surf + surf->ofsEnd );
-		cSurf = ( mdcSurface_t * )( (byte *)cSurf + cSurf->ofsEnd );
-	}
-
-	mod->type = MOD_MDC;
-
-	// free allocated memory
-	ri.Hunk_FreeTempMemory( baseFrames );
-
-	// kill the md3 memory
-	ri.Hunk_FreeTempMemory( md3 );
-	mod->md3[lod] = NULL;
-
-	return qtrue;
-}
 
 /*
 =================
@@ -946,13 +616,7 @@ static qboolean R_LoadMD3( model_t *mod, int lod, void *buffer, const char *mod_
 	mod->type = MOD_MESH;
 	size = LittleLong( pinmodel->ofsEnd );
 	mod->dataSize += size;
-	// Ridah, convert to compressed format
-	if ( !r_compressModels->integer ) {
-		mod->md3[lod] = ri.Hunk_Alloc( size, h_low );
-	} else {
-		mod->md3[lod] = ri.Hunk_AllocateTempMemory( size );
-	}
-	// done.
+	mod->md3[lod] = ri.Hunk_Alloc( size, h_low );
 
 	memcpy( mod->md3[lod], buffer, LittleLong( pinmodel->ofsEnd ) );
 
@@ -1109,11 +773,6 @@ static qboolean R_LoadMD3( model_t *mod, int lod, void *buffer, const char *mod_
 		surf = ( md3Surface_t * )( (byte *)surf + surf->ofsEnd );
 	}
 
-	// Ridah, convert to compressed format
-	if ( r_compressModels->integer ) {
-		R_MDC_ConvertMD3( mod, lod, mod_name );
-	}
-	// done.
 
 	return qtrue;
 }
