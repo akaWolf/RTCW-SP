@@ -642,7 +642,6 @@ void *Sys_LoadDll( const char *name,
 	char fname[MAX_OSPATH];
 	char  *homepath;
 	char  *basepath;
-	char  *pwdpath;
 	char  *gamedir;
 	char  *fn;
 	const char*  err = NULL; // bk001206 // rb0101023 - now const
@@ -675,106 +674,39 @@ void *Sys_LoadDll( const char *name,
 	basepath = Cvar_VariableString( "fs_basepath" );
 	gamedir = Cvar_VariableString( "fs_game" );
 
-	pwdpath = Sys_Cwd();
-	fn = FS_BuildOSPath( pwdpath, gamedir, fname );
+	// search fs_homepath, then fs_basepath (which defaults to the working
+	// directory) for fs_game, the base game and finally the bare directory;
+	// the working directory itself is not searched any more
+	{
+		const char *dirs[2];
+		const char *games[3];
+		int numGames = 0, d, g;
 
-	// bk001129 - from cvs1.17 (mkv), was fname not fn
-	libHandle = dlopen( fn, Q_RTLD );
-
-	if ( !libHandle ) {
-		Com_Printf( "failed (%s)\n", dlerror() );
-		// homepath
-		fn = FS_BuildOSPath( homepath, gamedir, fname );
-		Com_Printf( "Sys_LoadDll(%s)... ", fn );
-		libHandle = dlopen( fn, Q_RTLD );
-
-		if ( !libHandle ) {
-			Com_Printf( "failed (%s)\n", dlerror() );
-			// basepath
-			fn = FS_BuildOSPath( basepath, gamedir, fname );
-			Com_Printf( "Sys_LoadDll(%s)... ", fn );
-			libHandle = dlopen( fn, Q_RTLD );
-
-			if ( !libHandle ) {
-				Com_Printf( "failed (%s)\n", dlerror() );
-
-				if ( strlen( gamedir ) && Q_stricmp( gamedir, BASEGAME ) ) { // begin BASEGAME != fs_game section
-
-					// media-only mods: no DLL whatsoever in the fs_game
-					// start the loop again using the hardcoded BASEDIRNAME
-					fn = FS_BuildOSPath( pwdpath, BASEGAME, fname );
-					Com_Printf( "Sys_LoadDll(%s)... ", fn );
-					libHandle = dlopen( fn, Q_RTLD );
-
-					if ( !libHandle ) {
-						Com_Printf( "failed (%s)\n", dlerror() );
-						// homepath
-						fn = FS_BuildOSPath( homepath, BASEGAME, fname );
-						Com_Printf( "Sys_LoadDll(%s)... ", fn );
-						libHandle = dlopen( fn, Q_RTLD );
-
-						if ( !libHandle ) {
-							Com_Printf( "failed (%s)\n", dlerror() );
-							// homepath
-							fn = FS_BuildOSPath( basepath, BASEGAME, fname );
-							Com_Printf( "Sys_LoadDll(%s)... ", fn );
-							libHandle = dlopen( fn, Q_RTLD );
-
-							if ( !libHandle ) {
-								// ok, this time things are really fucked
-								Com_Printf( "failed (%s)\n", dlerror() );
-							} else {
-								Com_Printf( "ok\n" );
-							}
-						} else {
-							Com_Printf( "ok\n" );
-						}
-					} else {
-						Com_Printf( "ok\n" );
-					}
-				} else { // end BASEGAME != fs_game section
-					// start the loop again using empty gamename
-					fn = FS_BuildOSPath( pwdpath, ".", fname );
-					Com_Printf( "Sys_LoadDll(%s)... ", fn );
-					libHandle = dlopen( fn, Q_RTLD );
-
-					if ( !libHandle ) {
-						Com_Printf( "failed (%s)\n", dlerror() );
-						// homepath
-						fn = FS_BuildOSPath( homepath, ".", fname );
-						Com_Printf( "Sys_LoadDll(%s)... ", fn );
-						libHandle = dlopen( fn, Q_RTLD );
-
-						if ( !libHandle ) {
-							Com_Printf( "failed (%s)\n", dlerror() );
-							// homepath
-							fn = FS_BuildOSPath( basepath, ".", fname );
-							Com_Printf( "Sys_LoadDll(%s)... ", fn );
-							libHandle = dlopen( fn, Q_RTLD );
-
-							if ( !libHandle ) {
-								// ok, this time things are really fucked
-								Com_Printf( "failed (%s)\n", dlerror() );
-							} else {
-								Com_Printf( "ok\n" );
-							}
-						} else {
-							Com_Printf( "ok\n" );
-						}
-					} else {
-						Com_Printf( "ok\n" );
-					}
-				}
-			} else {
-				Com_Printf( "ok\n" );
-			}
-		} else {
-			Com_Printf( "ok\n" );
+		dirs[0] = homepath;
+		dirs[1] = basepath;
+		games[numGames++] = gamedir;
+		if ( strlen( gamedir ) && Q_stricmp( gamedir, BASEGAME ) ) {
+			games[numGames++] = BASEGAME;
 		}
-	} else {
-		Com_Printf( "ok\n" );
-	}
+		games[numGames++] = ".";
 
+		libHandle = NULL;
+		for ( g = 0; g < numGames && !libHandle; g++ ) {
+			for ( d = 0; d < 2 && !libHandle; d++ ) {
+				if ( !dirs[d] || !dirs[d][0] || ( d == 1 && !strcmp( dirs[0], dirs[1] ) ) ) {
+					continue;
+				}
+				fn = FS_BuildOSPath( dirs[d], games[g], fname );
+				Com_Printf( "Sys_LoadDll(%s)... ", fn );
+				libHandle = dlopen( fn, Q_RTLD );
+				if ( libHandle ) {
+					Com_Printf( "ok\n" );
+				} else {
+					Com_Printf( "failed (%s)\n", dlerror() );
+				}
+			}
+		}
+	}
 	if ( !libHandle ) {
 #ifndef NDEBUG // in debug, abort on failure
 		Com_Error( ERR_FATAL, "Sys_LoadDll(%s) failed dlopen() completely!\n", name  );

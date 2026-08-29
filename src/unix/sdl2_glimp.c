@@ -133,9 +133,11 @@ static void signal_handler( int sig ) {
 	signal_write( "Received signal " );
 	signal_write( num );
 	signal_write( ", exiting...\n" );
-	// not async-signal-safe either, but restoring the display is worth the risk
-	GLimp_Shutdown();
-	Sys_Exit( 0 );
+	// nothing below this point is async-signal-safe, so leave the window to
+	// the window system and let the default action run (core dump on a crash)
+	signal( sig, SIG_DFL );
+	raise( sig );
+	_exit( 1 );
 }
 
 static void InitSig( void ) {
@@ -359,7 +361,7 @@ int GLimp_SetMode(int mode, qboolean fullscreen, qboolean noborder)
 
 		// the window manager may not honour the requested size (tiling, emulated fullscreen);
 		// its resize usually arrives within a few ms of mapping, so give it a moment
-		Uint32 settle = SDL_GetTicks();
+		Uint32 start = SDL_GetTicks(), settle = start;
 		int lw = 0, lh = 0;
 
 		do {
@@ -367,7 +369,7 @@ int GLimp_SetMode(int mode, qboolean fullscreen, qboolean noborder)
 			SDL_GL_GetDrawableSize(SDLvidscreen, &dw, &dh);
 			if (dw != lw || dh != lh) { lw = dw; lh = dh; settle = SDL_GetTicks(); }
 			SDL_Delay(5);
-		} while (SDL_GetTicks() - settle < 60 && SDL_GetTicks() - settle < 400);
+		} while (SDL_GetTicks() - settle < 60 && SDL_GetTicks() - start < 400);
 		if (dw > 0 && dh > 0 && (dw != glConfig.vidWidth || dh != glConfig.vidHeight))
 		{
 			ri.Printf(PRINT_ALL, "Window is %dx%d instead of the requested %dx%d, using the real size\n",

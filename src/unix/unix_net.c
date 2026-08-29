@@ -444,13 +444,14 @@ void NET_GetLocalAddress( void ) {
 	}
 
 	numIP = 0;
-	while ( ( p = hostInfo->h_addr_list[numIP++] ) != NULL && numIP < MAX_IPS ) {
+	while ( numIP < MAX_IPS && ( p = hostInfo->h_addr_list[numIP] ) != NULL ) {
 		ip = ntohl( *(int *)p );
 		localIP[ numIP ][0] = p[0];
 		localIP[ numIP ][1] = p[1];
 		localIP[ numIP ][2] = p[2];
 		localIP[ numIP ][3] = p[3];
 		Com_Printf( "IP: %i.%i.%i.%i\n", ( ip >> 24 ) & 0xff, ( ip >> 16 ) & 0xff, ( ip >> 8 ) & 0xff, ip & 0xff );
+		numIP++;
 	}
 }
 #endif
