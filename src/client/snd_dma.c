@@ -168,7 +168,7 @@ void S_Init( void ) {
 	s_separation = Cvar_Get( "s_separation", "0.5", CVAR_ARCHIVE );
 	s_doppler = Cvar_Get( "s_doppler", "1", CVAR_ARCHIVE );
 	s_khz = Cvar_Get( "s_khz", "44", CVAR_ARCHIVE );
-	s_mixahead = Cvar_Get( "s_mixahead", "0.5", CVAR_ARCHIVE );    //DAJ was 0.2
+	s_mixahead = Cvar_Get( "s_mixahead", "0.1", CVAR_ARCHIVE );    // sounds start this far ahead of the DMA position: keep it low
 	s_debugMusic = Cvar_Get( "s_debugMusic", "0", CVAR_TEMP );
 
 	s_mixPreStep = Cvar_Get( "s_mixPreStep", "0.05", CVAR_ARCHIVE );

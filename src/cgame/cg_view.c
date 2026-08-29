@@ -965,7 +965,7 @@ CG_UnderwaterSounds
 #define UNDERWATER_BIT 8
 static void CG_UnderwaterSounds( void ) {
 //	trap_S_AddLoopingSound( cent->currentState.number, cent->lerpOrigin, vec3_origin, cgs.media.underWaterSound, 255 );
-	trap_S_AddLoopingSound( cg.snap->ps.clientNum, cg.snap->ps.origin, vec3_origin, cgs.media.underWaterSound, 255 & ( 1 << 8 ) );
+	trap_S_AddLoopingSound( cg.snap->ps.clientNum, cg.snap->ps.origin, vec3_origin, cgs.media.underWaterSound, 255 | ( 1 << 8 ) );   // bit 8 = loud under water (UNDERWATER_BIT), '&' made the volume 0
 }
 
 
