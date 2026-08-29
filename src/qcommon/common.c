@@ -2106,6 +2106,7 @@ void Com_Init( char *commandLine ) {
 	}
 
 	// start in full screen ui mode
+	Cvar_Get( "r_uiFullScreen", "0", 0 );   // the renderer registers it with this default too
 	Cvar_Set( "r_uiFullScreen", "1" );
 
 	CL_StartHunkUsers();

@@ -304,7 +304,7 @@ void R_ImageList_f( void ) {
 		case GL_REPEAT:
 			ri.Printf( PRINT_ALL, "rept " );
 			break;
-		case GL_CLAMP:
+		case GL_CLAMP_TO_EDGE:
 			ri.Printf( PRINT_ALL, "clmp " );
 			break;
 		default:
@@ -2204,7 +2204,7 @@ static void R_CreateDlightImage( void ) {
 			data[y][x][3] = 255;
 		}
 	}
-	tr.dlightImage = R_CreateImage( "*dlight", (byte *)data, DLIGHT_SIZE, DLIGHT_SIZE, qfalse, qfalse, GL_CLAMP );
+	tr.dlightImage = R_CreateImage( "*dlight", (byte *)data, DLIGHT_SIZE, DLIGHT_SIZE, qfalse, qfalse, GL_CLAMP_TO_EDGE );
 }
 
 
@@ -2365,7 +2365,7 @@ void R_CreateBuiltinImages( void ) {
 
 	for ( x = 0; x < 32; x++ ) {
 		// scratchimage is usually used for cinematic drawing
-		tr.scratchImage[x] = R_CreateImage( "*scratch", (byte *)data, DEFAULT_SIZE, DEFAULT_SIZE, qfalse, qtrue, GL_CLAMP );
+		tr.scratchImage[x] = R_CreateImage( "*scratch", (byte *)data, DEFAULT_SIZE, DEFAULT_SIZE, qfalse, qtrue, GL_CLAMP_TO_EDGE );
 	}
 
 	R_CreateDlightImage();

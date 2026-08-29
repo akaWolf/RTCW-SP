@@ -449,14 +449,8 @@ qboolean GLimp_StartDriverAndSetMode(int mode, qboolean fullscreen, qboolean nob
 
 qboolean GLimp_HaveExtension( char *ext )
 {
-	char *ptr = Q_stristr(glConfig.extensions_string, ext);
-
-	if (ptr == NULL)
-	{
-		return qfalse;
-	}
-	ptr += strlen(ext);
-	return ((*ptr == ' ') || (*ptr == '\0'));
+	// exact token match; also works where the extension string is only available through glGetStringi
+	return SDL_GL_ExtensionSupported( ext ) ? qtrue : qfalse;
 }
 static void GLimp_InitExtensions(void)
 {
@@ -521,7 +515,7 @@ static void GLimp_InitExtensions(void)
 	}
 
 	glConfig.textureEnvAddAvailable = qfalse;
-	if (GLimp_HaveExtension("EXT_texture_env_add"))
+	if (GLimp_HaveExtension("GL_EXT_texture_env_add"))
 	{
 		if (r_ext_texture_env_add->integer)
 		{
