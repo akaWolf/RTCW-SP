@@ -38,7 +38,7 @@ If you have questions concerning this license or the applicable additional terms
 
 #define MIN_DEDICATED_COMHUNKMEGS 1
 #define MIN_COMHUNKMEGS 54      // RF, optimizing
-#define DEF_COMHUNKMEGS "72"
+#define DEF_COMHUNKMEGS "128"     // 64 bit pointers make the level data bigger
 #define DEF_COMZONEMEGS "30"
 
 int com_argc;
