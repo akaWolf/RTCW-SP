@@ -98,6 +98,8 @@ cvar_t  *r_ext_compressed_textures;
 cvar_t  *r_ext_gamma_control;
 cvar_t  *r_ext_multitexture;
 cvar_t  *r_ext_compiled_vertex_array;
+cvar_t  *r_ext_texture_non_power_of_two;
+cvar_t  *r_ext_generate_mipmap;
 cvar_t  *r_ext_max_anisotropy;
 cvar_t  *r_ext_texture_env_add;
 
@@ -208,6 +210,8 @@ void ( APIENTRY * qglClientActiveTextureARB )( GLenum texture );
 
 void ( APIENTRY * qglLockArraysEXT )( GLint, GLint );
 void ( APIENTRY * qglUnlockArraysEXT )( void );
+void ( APIENTRY * qglGenerateMipmap )( GLenum target );
+qboolean gl_npotTextures;   // textures may keep their real size
 
 //----(SA)	end
 
@@ -974,6 +978,8 @@ void R_Register( void ) {
 	r_ext_gamma_control = ri.Cvar_Get( "r_ext_gamma_control", "1", CVAR_ARCHIVE | CVAR_LATCH );
 	r_ext_multitexture = ri.Cvar_Get( "r_ext_multitexture", "1", CVAR_ARCHIVE | CVAR_LATCH );
 	r_ext_compiled_vertex_array = ri.Cvar_Get( "r_ext_compiled_vertex_array", "1", CVAR_ARCHIVE | CVAR_LATCH );
+	r_ext_texture_non_power_of_two = ri.Cvar_Get( "r_ext_texture_non_power_of_two", "1", CVAR_ARCHIVE | CVAR_LATCH );
+	r_ext_generate_mipmap = ri.Cvar_Get( "r_ext_generate_mipmap", "1", CVAR_ARCHIVE | CVAR_LATCH );
 	r_ext_max_anisotropy = ri.Cvar_Get( "r_ext_max_anisotropy", "16", CVAR_ARCHIVE );
 	r_glIgnoreWicked3D = ri.Cvar_Get( "r_glIgnoreWicked3D", "0", CVAR_ARCHIVE | CVAR_LATCH );
 

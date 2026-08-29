@@ -1129,6 +1129,9 @@ extern cvar_t   *r_ext_gamma_control;
 extern cvar_t   *r_ext_texenv_op;
 extern cvar_t   *r_ext_multitexture;
 extern cvar_t   *r_ext_compiled_vertex_array;
+extern cvar_t   *r_ext_texture_non_power_of_two;
+extern cvar_t   *r_ext_generate_mipmap;
+extern qboolean gl_npotTextures;
 extern cvar_t   *r_ext_max_anisotropy;
 extern cvar_t   *r_ext_texture_env_add;
 //----(SA)	added

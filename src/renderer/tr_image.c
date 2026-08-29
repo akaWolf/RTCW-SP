@@ -683,6 +683,11 @@ static void Upload32(   unsigned *data,
 		scaled_height >>= 1;
 	}
 
+	if ( gl_npotTextures ) {
+		// no need to resample, the driver takes any size
+		scaled_width = width;
+		scaled_height = height;
+	}
 	if ( scaled_width != width || scaled_height != height ) {
 		//resampledBuffer = ri.Hunk_AllocateTempMemory( scaled_width * scaled_height * 4 );
 		resampledBuffer = R_GetImageBuffer( scaled_width * scaled_height * 4, BUFFER_RESAMPLED );
@@ -846,7 +851,10 @@ static void Upload32(   unsigned *data,
 
 	qglTexImage2D( GL_TEXTURE_2D, 0, internalFormat, scaled_width, scaled_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, scaledBuffer );
 
-	if ( mipmap ) {
+	if ( mipmap && qglGenerateMipmap && !r_colorMipLevels->integer ) {
+		// let the driver build the chain from the (light scaled) base level
+		qglGenerateMipmap( GL_TEXTURE_2D );
+	} else if ( mipmap ) {
 		int miplevel;
 
 		miplevel = 0;

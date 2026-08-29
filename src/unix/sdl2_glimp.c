@@ -534,6 +534,29 @@ static void GLimp_InitExtensions(void)
 	}
 
 	qglMultiTexCoord2fARB     = NULL;
+	// GL 2.0 made non power of two textures core (still advertised as an extension),
+	// GL 3.0 / ARB_framebuffer_object added glGenerateMipmap
+	gl_npotTextures = qfalse;
+	if ( r_ext_texture_non_power_of_two->integer && GLimp_HaveExtension( "GL_ARB_texture_non_power_of_two" ) )
+	{
+		gl_npotTextures = qtrue;
+		ri.Printf( PRINT_ALL, "...using GL_ARB_texture_non_power_of_two\n" );
+	}
+	else
+	{
+		ri.Printf( PRINT_ALL, "...ignoring GL_ARB_texture_non_power_of_two\n" );
+	}
+	qglGenerateMipmap = NULL;
+	if ( r_ext_generate_mipmap->integer )
+	{
+		if ( GLimp_HaveExtension( "GL_ARB_framebuffer_object" ) )
+			qglGenerateMipmap = SDL_GL_GetProcAddress( "glGenerateMipmap" );
+		else if ( GLimp_HaveExtension( "GL_EXT_framebuffer_object" ) )
+			qglGenerateMipmap = SDL_GL_GetProcAddress( "glGenerateMipmapEXT" );
+	}
+	ri.Printf( PRINT_ALL, qglGenerateMipmap ? "...using glGenerateMipmap\n" : "...ignoring glGenerateMipmap\n" );
+
+
 	qglActiveTextureARB       = NULL;
 	qglClientActiveTextureARB = NULL;
 	if (GLimp_HaveExtension("GL_ARB_multitexture"))

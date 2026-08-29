@@ -185,6 +185,9 @@ extern void ( APIENTRY * qglClientActiveTextureARB )( GLenum texture );
 extern void ( APIENTRY * qglLockArraysEXT )( GLint, GLint );
 extern void ( APIENTRY * qglUnlockArraysEXT )( void );
 
+// GL 3.0 / ARB_framebuffer_object
+extern void ( APIENTRY * qglGenerateMipmap )( GLenum target );
+
 //----(SA)	added
 //----(SA)	end
 
