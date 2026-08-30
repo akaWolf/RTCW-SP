@@ -128,7 +128,7 @@ void SV_GetChallenge( netadr_t from ) {
 		game[0] = 0;
 		fs = Cvar_Get( "fs_game", "", CVAR_INIT | CVAR_SYSTEMINFO );
 		if ( fs && fs->string[0] != 0 ) {
-			strcpy( game, fs->string );
+			Q_strncpyz( game, fs->string, sizeof( game ) );
 		}
 		Com_DPrintf( "sending getIpAuthorize for %s\n", NET_AdrToString( from ) );
 		fs = Cvar_Get( "sv_allowAnonymous", "0", CVAR_SERVERINFO );
@@ -199,7 +199,7 @@ void SV_AuthorizeIpPacket( netadr_t from ) {
 		if ( !r ) {
 			NET_OutOfBandPrint( NS_SERVER, svs.challenges[i].adr, "print\nAwaiting CD key authorization\n" );
 		} else {
-			sprintf( ret, "print\n%s\n", r );
+			Com_sprintf( ret, sizeof( ret ), "print\n%s\n", r );
 			NET_OutOfBandPrint( NS_SERVER, svs.challenges[i].adr, ret );
 		}
 		// clear the challenge record so it won't timeout and let them through
@@ -211,7 +211,7 @@ void SV_AuthorizeIpPacket( netadr_t from ) {
 	if ( !r ) {
 		NET_OutOfBandPrint( NS_SERVER, svs.challenges[i].adr, "print\nSomeone is using this CD Key\n" );
 	} else {
-		sprintf( ret, "print\n%s\n", r );
+		Com_sprintf( ret, sizeof( ret ), "print\n%s\n", r );
 		NET_OutOfBandPrint( NS_SERVER, svs.challenges[i].adr, ret );
 	}
 

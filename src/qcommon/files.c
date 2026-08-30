@@ -1976,7 +1976,7 @@ static int FS_ReturnPath( const char *zname, char *zpath, int *depth ) {
 		}
 		at++;
 	}
-	strcpy( zpath, zname );
+	strcpy( zpath, zname );     // zpath is a MAX_ZPATH buffer of the caller, zname never exceeds it
 	zpath[len] = 0;
 	*depth = newdep;
 
@@ -2364,8 +2364,8 @@ int FS_GetModList( char *listbuf, int bufsize ) {
 				// nLen is the length of the mod path
 				// we need to see if there is a description available
 				descPath[0] = '\0';
-				strcpy( descPath, name );
-				strcat( descPath, "/description.txt" );
+				Q_strncpyz( descPath, name, sizeof( descPath ) );
+				Q_strcat( descPath, sizeof( descPath ), "/description.txt" );
 				nDescLen = FS_SV_FOpenFileRead( descPath, &descHandle );
 				if ( nDescLen > 0 && descHandle ) {
 					FILE *file;
@@ -2377,7 +2377,7 @@ int FS_GetModList( char *listbuf, int bufsize ) {
 					}
 					FS_FCloseFile( descHandle );
 				} else {
-					strcpy( descPath, name );
+					Q_strncpyz( descPath, name, sizeof( descPath ) );
 				}
 				nDescLen = strlen( descPath ) + 1;
 
@@ -2705,7 +2705,7 @@ static void FS_AddGameDirectory( const char *path, const char *dir ) {
 				continue;
 			}
 			// store the game name for downloading
-			strcpy( pak->pakGamename, dir );
+			Q_strncpyz( pak->pakGamename, dir, sizeof( pak->pakGamename ) );
 
 			search = Z_Malloc( sizeof( searchpath_t ) );
 			search->pack = pak;

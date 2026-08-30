@@ -177,7 +177,7 @@ qhandle_t RE_RegisterModel( const char *name ) {
 	for ( lod = MD3_MAX_LODS - 1 ; lod >= 0 ; lod-- ) {
 		char filename[1024];
 
-		strcpy( filename, name );
+		Q_strncpyz( filename, name, sizeof( filename ) );
 
 		if ( lod != 0 ) {
 			char namebuf[80];
@@ -185,8 +185,8 @@ qhandle_t RE_RegisterModel( const char *name ) {
 			if ( strrchr( filename, '.' ) ) {
 				*strrchr( filename, '.' ) = 0;
 			}
-			sprintf( namebuf, "_%d.md3", lod );
-			strcat( filename, namebuf );
+			Com_sprintf( namebuf, sizeof( namebuf ), "_%d.md3", lod );
+			Q_strcat( filename, sizeof( filename ), namebuf );
 		}
 
 		filename[strlen( filename ) - 1] = 'c';  // try MDC first

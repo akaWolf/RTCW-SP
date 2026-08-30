@@ -961,12 +961,12 @@ void CL_Setenv_f( void ) {
 		char buffer[1024];
 		int i;
 
-		strcpy( buffer, Cmd_Argv( 1 ) );
-		strcat( buffer, "=" );
+		Q_strncpyz( buffer, Cmd_Argv( 1 ), sizeof( buffer ) );
+		Q_strcat( buffer, sizeof( buffer ), "=" );
 
 		for ( i = 2; i < argc; i++ ) {
-			strcat( buffer, Cmd_Argv( i ) );
-			strcat( buffer, " " );
+			Q_strcat( buffer, sizeof( buffer ), Cmd_Argv( i ) );
+			Q_strcat( buffer, sizeof( buffer ), " " );
 		}
 
 		// putenv() keeps the pointer it is given, so hand it a copy that outlives this call
@@ -1111,14 +1111,14 @@ void CL_Rcon_f( void ) {
 	message[3] = -1;
 	message[4] = 0;
 
-	strcat( message, "rcon " );
+	Q_strcat( message, sizeof( message ), "rcon " );
 
-	strcat( message, rcon_client_password->string );
-	strcat( message, " " );
+	Q_strcat( message, sizeof( message ), rcon_client_password->string );
+	Q_strcat( message, sizeof( message ), " " );
 
 	for ( i = 1 ; i < Cmd_Argc() ; i++ ) {
-		strcat( message, Cmd_Argv( i ) );
-		strcat( message, " " );
+		Q_strcat( message, sizeof( message ), Cmd_Argv( i ) );
+		Q_strcat( message, sizeof( message ), " " );
 	}
 
 	if ( cls.state >= CA_CONNECTED ) {
@@ -2108,12 +2108,12 @@ static void CL_Cache_UsedFile_f( void ) {
 		return;
 	}
 
-	strcpy( groupStr, Cmd_Argv( 1 ) );
+	Q_strncpyz( groupStr, Cmd_Argv( 1 ), sizeof( groupStr ) );
 
-	strcpy( itemStr, Cmd_Argv( 2 ) );
+	Q_strncpyz( itemStr, Cmd_Argv( 2 ), sizeof( itemStr ) );
 	for ( i = 3; i < Cmd_Argc(); i++ ) {
-		strcat( itemStr, " " );
-		strcat( itemStr, Cmd_Argv( i ) );
+		Q_strcat( itemStr, sizeof( itemStr ), " " );
+		Q_strcat( itemStr, sizeof( itemStr ), Cmd_Argv( i ) );
 	}
 	Q_strlwr( itemStr );
 
@@ -2844,7 +2844,7 @@ void CL_ServerInfoPacket( netadr_t from, msg_t *msg ) {
 	Q_strncpyz( info, MSG_ReadString( msg ), MAX_INFO_STRING - 1 );
 	if ( strlen( info ) ) {
 		if ( info[strlen( info ) - 1] != '\n' ) {
-			strcat( info, "\n" );
+			Q_strcat( info, sizeof( info ), "\n" );
 		}
 		Com_Printf( "%s: %s", NET_AdrToString( from ), info );
 	}
@@ -3125,17 +3125,20 @@ void CL_GlobalServers_f( void ) {
 	to.type = NA_IP;
 	to.port = BigShort( PORT_MASTER );
 
-	sprintf( command, "getservers %s", Cmd_Argv( 2 ) );
+	Com_sprintf( command, sizeof( command ), "getservers %s", Cmd_Argv( 2 ) );
 
 	// tack on keywords
 	buffptr = command + strlen( command );
 	count   = Cmd_Argc();
-	for ( i = 3; i < count; i++ )
-		buffptr += sprintf( buffptr, " %s", Cmd_Argv( i ) );
+	for ( i = 3; i < count; i++ ) {
+		Com_sprintf( buffptr, sizeof( command ) - ( buffptr - command ), " %s", Cmd_Argv( i ) );
+		buffptr += strlen( buffptr );
+	}
 
 	// if we are a demo, automatically add a "demo" keyword
 	if ( Cvar_VariableValue( "fs_restrict" ) ) {
-		buffptr += sprintf( buffptr, " demo" );
+		Com_sprintf( buffptr, sizeof( command ) - ( buffptr - command ), " demo" );
+		buffptr += strlen( buffptr );
 	}
 
 	NET_OutOfBandPrint( NS_SERVER, to, command );
@@ -3533,7 +3536,7 @@ qboolean CL_CDKeyValidate( const char *key, const char *checksum ) {
 	}
 
 
-	sprintf( chs, "%02x", sum );
+	Com_sprintf( chs, sizeof( chs ), "%02x", sum );
 
 	if ( checksum && !Q_stricmp( chs, checksum ) ) {
 		return qtrue;
@@ -3566,7 +3569,7 @@ void CL_AddToLimboChat( const char *str ) {
 
 	// copy old strings
 	for ( i = cl.limboChatPos; i > 0; i-- ) {
-		strcpy( cl.limboChatMsgs[i], cl.limboChatMsgs[i - 1] );
+		Q_strncpyz( cl.limboChatMsgs[i], cl.limboChatMsgs[i - 1], sizeof( cl.limboChatMsgs[i] ) );
 	}
 
 	// copy new string

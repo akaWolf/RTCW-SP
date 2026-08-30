@@ -477,7 +477,7 @@ char *Sys_ConsoleInput( void ) {
 				if ( key == '\n' ) {
 					// push it in history
 					Hist_Add( &tty_con );
-					strcpy( text, tty_con.buffer );
+					Q_strncpyz( text, tty_con.buffer, sizeof( text ) );
 					Field_Clear( &tty_con );
 					key = '\n';
 					retval += write( 1, &key, 1 );

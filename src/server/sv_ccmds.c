@@ -172,7 +172,7 @@ static void SV_Map_f( void ) {
 		if ( !( strstr( map, "save/" ) == map ) ) {
 			Com_sprintf( savemap, sizeof( savemap ), "save/%s", map );
 		} else {
-			strcpy( savemap, map );
+			Q_strncpyz( savemap, map, sizeof( savemap ) );
 		}
 
 		size = FS_ReadFile( savemap, NULL );
@@ -809,7 +809,7 @@ static void SV_ConSay_f( void ) {
 		return;
 	}
 
-	strcpy( text, "console: " );
+	Q_strncpyz( text, "console: ", sizeof( text ) );
 	p = Cmd_Args();
 
 	if ( *p == '"' ) {
@@ -817,7 +817,7 @@ static void SV_ConSay_f( void ) {
 		p[strlen( p ) - 1] = 0;
 	}
 
-	strcat( text, p );
+	Q_strcat( text, sizeof( text ), p );
 
 	SV_SendServerCommand( NULL, "chat \"%s\n\"", text );
 }

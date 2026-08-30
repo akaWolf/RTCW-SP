@@ -270,7 +270,7 @@ void Con_Dump_f( void ) {
 				break;
 			}
 		}
-		strcat( buffer, "\n" );
+		Q_strcat( buffer, sizeof( buffer ), "\n" );
 		FS_Write( buffer, strlen( buffer ), f );
 	}
 

@@ -956,7 +956,7 @@ image_t *R_CreateImageExt( const char *name, const byte *pic, int width, int hei
 	image->mipmap = mipmap;
 	image->allowPicmip = allowPicmip;
 
-	strcpy( image->imgName, name );
+	Q_strncpyz( image->imgName, name, sizeof( image->imgName ) );
 
 	image->width = width;
 	image->height = height;
@@ -1774,7 +1774,7 @@ void R_LoadImage( const char *name, byte **pic, int *width, int *height ) {
 		LoadTGA( name, pic, width, height );          // try tga first
 		if ( !*pic ) {                              //
 			char altname[MAX_QPATH];                    // try jpg in place of tga
-			strcpy( altname, name );
+			Q_strncpyz( altname, name, sizeof( altname ) );
 			len = strlen( altname );
 			altname[len - 3] = 'j';
 			altname[len - 2] = 'p';
@@ -1863,7 +1863,7 @@ image_t *R_FindImageFileExt( const char *name, qboolean mipmap, qboolean allowPi
 #if !defined( _WIN32 )
 		char altname[MAX_QPATH];                            // copy the name
 		int len;                                          //
-		strcpy( altname, name );                          //
+		Q_strncpyz( altname, name, sizeof( altname ) );                          //
 		len = strlen( altname );                          //
 		altname[len - 3] = toupper( altname[len - 3] );   // and try upper case extension for unix systems
 		altname[len - 2] = toupper( altname[len - 2] );   //

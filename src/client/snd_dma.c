@@ -405,7 +405,7 @@ static sfx_t *S_FindName( const char *name ) {
 
 	sfx = &s_knownSfx[i];
 	Com_Memset( sfx, 0, sizeof( *sfx ) );
-	strcpy( sfx->soundName, name );
+	Q_strncpyz( sfx->soundName, name, sizeof( sfx->soundName ) );
 
 	sfx->next = snd.sfxHash[hash];
 	snd.sfxHash[hash] = sfx;
@@ -1838,7 +1838,7 @@ void S_StartBackgroundTrack( const char *intro, const char *loop, int fadeupTime
 		// -2 - queue to set as new looping music
 
 		if ( intro && strlen( intro ) ) {
-			strcpy( snd.nextMusicTrack, intro );
+			Q_strncpyz( snd.nextMusicTrack, intro, sizeof( snd.nextMusicTrack ) );
 			snd.nextMusicTrackType = fadeupTime;
 			if ( fadeupTime == -2 ) {
 				Cvar_Set( "s_currentMusic", intro ); //----(SA)	so the savegame will have the right music

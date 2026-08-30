@@ -342,7 +342,7 @@ void SVC_Status( netadr_t from ) {
 		return;
 	}
 
-	strcpy( infostring, Cvar_InfoString( CVAR_SERVERINFO ) );
+	Q_strncpyz( infostring, Cvar_InfoString( CVAR_SERVERINFO ), sizeof( infostring ) );
 
 	// echo back the parameter to status. so master servers can use it as a challenge
 	// to prevent timed spoofed reply packets that add ghost servers
@@ -485,8 +485,8 @@ void SVC_RemoteCommand( netadr_t from, msg_t *msg ) {
 		remaining[0] = 0;
 
 		for ( i = 2 ; i < Cmd_Argc() ; i++ ) {
-			strcat( remaining, Cmd_Argv( i ) );
-			strcat( remaining, " " );
+			Q_strcat( remaining, sizeof( remaining ), Cmd_Argv( i ) );
+			Q_strcat( remaining, sizeof( remaining ), " " );
 		}
 
 		Cmd_ExecuteString( remaining );
