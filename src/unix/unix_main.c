@@ -1253,6 +1253,7 @@ int main( int argc, char* argv[] ) {
 	int retval;
 	char  *cmdline;
 	void Sys_SetDefaultCDPath( const char *path );
+	void Sys_SetDefaultInstallPath( const char *path );
 
 	// go back to real user for config loads
 	saved_euid = geteuid();
@@ -1262,6 +1263,24 @@ int main( int argc, char* argv[] ) {
 
 	// TTimo: no CD path
 	Sys_SetDefaultCDPath( "" );
+
+	// fs_basepath defaults to the directory of the executable instead of the
+	// working directory, so the game can be started from anywhere
+	{
+		char exePath[MAX_OSPATH];
+		ssize_t n = readlink( "/proc/self/exe", exePath, sizeof( exePath ) - 1 );
+
+		if ( n > 0 ) {
+			char *slash;
+
+			exePath[n] = 0;
+			slash = strrchr( exePath, '/' );
+			if ( slash && slash != exePath ) {
+				*slash = 0;
+				Sys_SetDefaultInstallPath( exePath );
+			}
+		}
+	}
 
 	// merge the command line, this is kinda silly
 	for ( len = 1, i = 1; i < argc; i++ )

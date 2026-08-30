@@ -357,12 +357,29 @@ char *Sys_DefaultHomePath( void ) {
 #ifdef MACOS_X
 		Q_strcat( homePath, sizeof( homePath ), "/Library/Application Support/WolfensteinSP" );
 #else
+		{
+			// an existing dot directory keeps being used, new installs follow
+			// the XDG base directory specification
 #if defined( WOLF_SP_DEMO )
-		// use a different prefix to be safe
-		Q_strcat( homePath, sizeof( homePath ), "/.wolf-spdemo" );
+			const char *legacyName = "/.wolf-spdemo", *xdgName = "/wolf-spdemo";
 #else
-		Q_strcat( homePath, sizeof( homePath ), "/.wolf" );
+			const char *legacyName = "/.wolf", *xdgName = "/wolf";
 #endif
+			const char *xdg = getenv( "XDG_DATA_HOME" );
+			char legacy[MAX_OSPATH];
+			struct stat st;
+
+			Com_sprintf( legacy, sizeof( legacy ), "%s%s", homePath, legacyName );
+			if ( stat( legacy, &st ) == 0 && S_ISDIR( st.st_mode ) ) {
+				Q_strncpyz( homePath, legacy, sizeof( homePath ) );
+			} else if ( xdg && xdg[0] == '/' ) {
+				Com_sprintf( homePath, sizeof( homePath ), "%s%s", xdg, xdgName );
+			} else {
+				Q_strcat( homePath, sizeof( homePath ), "/.local/share" );
+				mkdir( homePath, 0777 );    // may already exist
+				Q_strcat( homePath, sizeof( homePath ), xdgName );
+			}
+		}
 #endif
 		if ( mkdir( homePath, 0777 ) ) {
 			if ( errno != EEXIST ) {
