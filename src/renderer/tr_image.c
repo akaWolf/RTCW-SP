@@ -46,6 +46,9 @@ If you have questions concerning this license or the applicable additional terms
 #include <stdio.h>
 #include <stdlib.h>
 #include <jpeglib.h>
+
+// larger images would overflow the int pixel counts
+#define MAX_IMAGE_DIMENSION 16384
 #include <setjmp.h>
 
 
@@ -1114,6 +1117,9 @@ static void LoadBMP( const char *name, byte **pic, int *width, int *height ) {
 	if ( rows < 0 ) {
 		rows = -rows;
 	}
+	if ( columns <= 0 || rows <= 0 || columns > MAX_IMAGE_DIMENSION || rows > MAX_IMAGE_DIMENSION ) {
+		ri.Error( ERR_DROP, "%s has a bad size (%i x %i)\n", name, columns, rows );
+	}
 	numPixels = columns * rows;
 
 	if ( width ) {
@@ -1407,6 +1413,9 @@ void LoadTGA( const char *name, byte **pic, int *width, int *height ) {
 
 	columns = targa_header.width;
 	rows = targa_header.height;
+	if ( columns <= 0 || rows <= 0 || columns > MAX_IMAGE_DIMENSION || rows > MAX_IMAGE_DIMENSION ) {
+		ri.Error( ERR_DROP, "%s has a bad size (%i x %i)\n", name, columns, rows );
+	}
 	numPixels = columns * rows;
 
 	if ( width ) {

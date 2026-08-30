@@ -1470,6 +1470,10 @@ void G_LoadGame( char *filename ) {
 
 	// read the info string length
 	trap_FS_Read( &i, sizeof( i ), f );
+	if ( i < 0 || i > sizeof( infoString ) ) {
+		trap_FS_FCloseFile( f );
+		G_Error( "G_LoadGame: savegame '%s' has a bad info string length (%i)\n", filename, i );
+	}
 
 	// read the info string
 	trap_FS_Read( infoString, i, f );
@@ -1547,6 +1551,10 @@ void G_LoadGame( char *filename ) {
 	// read the entity structures
 	trap_FS_Read( &i, sizeof( i ), f );
 	size = i;
+	if ( size != sizeof( gentity_t ) ) {
+		trap_FS_FCloseFile( f );
+		G_Error( "G_LoadGame: savegame '%s' was written by a different build of the game (entity size %i, expected %i)\n", filename, size, (int)sizeof( gentity_t ) );
+	}
 	last = 0;
 	while ( 1 )
 	{
@@ -1588,6 +1596,10 @@ void G_LoadGame( char *filename ) {
 	// read the client structures
 	trap_FS_Read( &i, sizeof( i ), f );
 	size = i;
+	if ( size != sizeof( gclient_t ) ) {
+		trap_FS_FCloseFile( f );
+		G_Error( "G_LoadGame: savegame '%s' was written by a different build of the game (client size %i, expected %i)\n", filename, size, (int)sizeof( gclient_t ) );
+	}
 	while ( 1 )
 	{
 		trap_FS_Read( &i, sizeof( i ), f );
@@ -1609,6 +1621,10 @@ void G_LoadGame( char *filename ) {
 	// read the cast_state structures
 	trap_FS_Read( &i, sizeof( i ), f );
 	size = i;
+	if ( size != sizeof( cast_state_t ) ) {
+		trap_FS_FCloseFile( f );
+		G_Error( "G_LoadGame: savegame '%s' was written by a different build of the game (cast state size %i, expected %i)\n", filename, size, (int)sizeof( cast_state_t ) );
+	}
 	while ( 1 )
 	{
 		trap_FS_Read( &i, sizeof( i ), f );
