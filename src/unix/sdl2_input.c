@@ -35,6 +35,7 @@
 #include <SDL2/SDL_keyboard.h>
 #include <SDL2/SDL_video.h>
 
+#include <math.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -53,6 +54,11 @@ static qboolean mouseActive      = qfalse;
 extern SDL_Window *SDLvidscreen;
 
 static SDL_Joystick *stick                = NULL;
+static SDL_GameController *gamepad = NULL;
+qboolean in_gamepadActive = qfalse;     // CL_JoystickMove: left stick moves, right stick looks
+static cvar_t *in_gamepad = NULL;
+static cvar_t *in_gamepadLookSpeed = NULL;
+static cvar_t *in_charset = NULL;
 static cvar_t       *in_joystick          = NULL;
 static cvar_t       *in_joystickDebug     = NULL;
 static cvar_t       *in_joystickThreshold = NULL;
@@ -411,14 +417,19 @@ static void IN_InitJoystick(void)
 	{
 		SDL_JoystickClose(stick);
 	}
-
 	stick = NULL;
+	if (gamepad != NULL)
+	{
+		SDL_GameControllerClose(gamepad);
+	}
+	gamepad = NULL;
+	in_gamepadActive = qfalse;
 	memset(&stick_state, '\0', sizeof(stick_state));
 
-	if (!SDL_WasInit(SDL_INIT_JOYSTICK))
+	if (!SDL_WasInit(SDL_INIT_GAMECONTROLLER))
 	{
-		Com_DPrintf("Calling SDL_Init(SDL_INIT_JOYSTICK)...\n");
-		if (SDL_Init(SDL_INIT_JOYSTICK) == -1)
+		Com_DPrintf("Calling SDL_Init(SDL_INIT_GAMECONTROLLER)...\n");
+		if (SDL_Init(SDL_INIT_GAMECONTROLLER) == -1)
 		{
 			Com_DPrintf("SDL_Init(SDL_INIT_JOYSTICK) failed: %s\n", SDL_GetError());
 			return;
@@ -453,6 +464,21 @@ static void IN_InitJoystick(void)
 
 	in_joystickUseAnalog = Cvar_Get("in_joystickUseAnalog", "0", CVAR_ARCHIVE);
 
+	// a device with a known game controller mapping gets the twin stick treatment
+	in_gamepad          = Cvar_Get("in_gamepad", "1", CVAR_ARCHIVE);
+	in_gamepadLookSpeed = Cvar_Get("in_gamepadLookSpeed", "1", CVAR_ARCHIVE);
+	if (in_gamepad->integer && SDL_IsGameController(in_joystickNo->integer))
+	{
+		gamepad = SDL_GameControllerOpen(in_joystickNo->integer);
+		if (gamepad)
+		{
+			in_gamepadActive = qtrue;
+			Com_DPrintf("Game controller %d opened: %s\n", in_joystickNo->integer, SDL_GameControllerName(gamepad));
+			return;
+		}
+		Com_DPrintf("SDL_GameControllerOpen failed: %s\n", SDL_GetError());
+	}
+
 	stick = SDL_JoystickOpen(in_joystickNo->integer);
 
 	if (stick == NULL)
@@ -475,13 +501,104 @@ static void IN_InitJoystick(void)
 
 static void IN_ShutdownJoystick(void)
 {
+	if (gamepad)
+	{
+		SDL_GameControllerClose(gamepad);
+		gamepad = NULL;
+	}
+	in_gamepadActive = qfalse;
 	if (stick)
 	{
 		SDL_JoystickClose(stick);
 		stick = NULL;
 	}
-
+	SDL_QuitSubSystem(SDL_INIT_GAMECONTROLLER);
 	SDL_QuitSubSystem(SDL_INIT_JOYSTICK);
+}
+
+/*
+===============
+IN_GamepadMove
+
+Buttons become K_JOY1.. in SDL's controller order (A, B, X, Y, back, guide,
+start, sticks, shoulders), the dpad the arrow keys and the triggers
+K_JOY16/K_JOY17. The sticks are reported through the joystick axes:
+movement in -127..127, looking in -1000..1000.
+===============
+*/
+static void IN_GamepadMove(void)
+{
+	static const int buttonKeys[] =
+	{
+		K_JOY1, K_JOY2, K_JOY3, K_JOY4, K_JOY5, K_JOY6, K_JOY7, K_JOY8, K_JOY9, K_JOY10, K_JOY11,
+		K_UPARROW, K_DOWNARROW, K_LEFTARROW, K_RIGHTARROW,
+		K_JOY12, K_JOY13, K_JOY14, K_JOY15, K_JOY18, K_JOY19
+	};
+	static const struct { SDL_GameControllerAxis sdl; int axis; float scale; } sticks[] =
+	{
+		{ SDL_CONTROLLER_AXIS_LEFTX,  AXIS_SIDE,    127.0f },
+		{ SDL_CONTROLLER_AXIS_LEFTY,  AXIS_FORWARD, -127.0f },
+		{ SDL_CONTROLLER_AXIS_RIGHTX, AXIS_YAW,     1000.0f },
+		{ SDL_CONTROLLER_AXIS_RIGHTY, AXIS_PITCH,   1000.0f }
+	};
+	static qboolean buttons[ARRAY_LEN(buttonKeys)];
+	static qboolean triggers[2];
+	static int      oldAxes[MAX_JOYSTICK_AXIS];
+	int             newAxes[MAX_JOYSTICK_AXIS];
+	float           threshold = in_joystickThreshold->value;
+	int             i, numButtons;
+
+	SDL_GameControllerUpdate();
+
+	numButtons = SDL_CONTROLLER_BUTTON_MAX < ARRAY_LEN(buttonKeys) ? SDL_CONTROLLER_BUTTON_MAX : ARRAY_LEN(buttonKeys);
+	for (i = 0; i < numButtons; i++)
+	{
+		qboolean pressed = SDL_GameControllerGetButton(gamepad, (SDL_GameControllerButton)i) != 0;
+
+		if (pressed != buttons[i])
+		{
+			Com_QueueEvent(0, SE_KEY, buttonKeys[i], pressed, 0, NULL);
+			buttons[i] = pressed;
+		}
+	}
+
+	for (i = 0; i < 2; i++)
+	{
+		int      value   = SDL_GameControllerGetAxis(gamepad, i ? SDL_CONTROLLER_AXIS_TRIGGERRIGHT : SDL_CONTROLLER_AXIS_TRIGGERLEFT);
+		qboolean pressed = value > threshold * 32767.0f;
+
+		if (pressed != triggers[i])
+		{
+			Com_QueueEvent(0, SE_KEY, i ? K_JOY17 : K_JOY16, pressed, 0, NULL);
+			triggers[i] = pressed;
+		}
+	}
+
+	memset(newAxes, 0, sizeof(newAxes));
+	for (i = 0; i < ARRAY_LEN(sticks); i++)
+	{
+		float f = SDL_GameControllerGetAxis(gamepad, sticks[i].sdl) / 32767.0f;
+
+		if (fabsf(f) < threshold)
+		{
+			continue;
+		}
+		// rescale so that the range past the dead zone is fully used
+		f = (f - (f > 0 ? threshold : -threshold)) / (1.0f - threshold);
+		if (sticks[i].axis == AXIS_YAW || sticks[i].axis == AXIS_PITCH)
+		{
+			f *= in_gamepadLookSpeed->value;
+		}
+		newAxes[sticks[i].axis] = (int)(f * sticks[i].scale);
+	}
+	for (i = 0; i < MAX_JOYSTICK_AXIS; i++)
+	{
+		if (newAxes[i] != oldAxes[i])
+		{
+			Com_QueueEvent(0, SE_JOYSTICK_AXIS, i, newAxes[i], 0, NULL);
+			oldAxes[i] = newAxes[i];
+		}
+	}
 }
 
 void IN_JoyMove(void)
@@ -492,6 +609,11 @@ void IN_JoyMove(void)
 	int          total = 0;
 	int          i     = 0;
 
+	if (gamepad)
+	{
+		IN_GamepadMove();
+		return;
+	}
 	if (!stick)
 	{
 		return;
@@ -709,6 +831,69 @@ void IN_JoyMove(void)
 	stick_state.oldaxes = axes;
 }
 
+/*
+===============
+IN_QueueCP1251
+
+Maps the Cyrillic part of a UTF-8 text input event to Windows-1251, the code
+page of the localised fonts. Returns qfalse if nothing was mapped.
+===============
+*/
+static qboolean IN_QueueCP1251(const char *text)
+{
+	const unsigned char *c = (const unsigned char *)text;
+	qboolean queued = qfalse;
+
+	while (*c)
+	{
+		unsigned int cp;
+		int          mapped = 0;
+
+		if (*c < 0x80)
+		{
+			cp = *c++;
+		}
+		else if ((*c & 0xE0) == 0xC0 && (c[1] & 0xC0) == 0x80)
+		{
+			cp = ((c[0] & 0x1F) << 6) | (c[1] & 0x3F);
+			c += 2;
+		}
+		else if ((*c & 0xF0) == 0xE0 && (c[1] & 0xC0) == 0x80 && (c[2] & 0xC0) == 0x80)
+		{
+			cp = ((c[0] & 0x0F) << 12) | ((c[1] & 0x3F) << 6) | (c[2] & 0x3F);
+			c += 3;
+		}
+		else
+		{
+			c++;
+			continue;
+		}
+
+		if (cp >= ' ' && cp < 127)
+		{
+			mapped = cp;
+		}
+		else if (cp >= 0x410 && cp <= 0x44F)
+		{
+			mapped = 0xC0 + (cp - 0x410);      // A..ya
+		}
+		else if (cp == 0x401)
+		{
+			mapped = 0xA8;                      // Yo
+		}
+		else if (cp == 0x451)
+		{
+			mapped = 0xB8;                      // yo
+		}
+		if (mapped)
+		{
+			Com_QueueEvent(0, SE_CHAR, mapped, 0, 0, NULL);
+			queued = qtrue;
+		}
+	}
+	return queued;
+}
+
 static void IN_ProcessEvents(void)
 {
 	static keyNum_t scrollwheel = 0;
@@ -811,6 +996,15 @@ static void IN_ProcessEvents(void)
 			}
 			break;
 
+		case SDL_CONTROLLERDEVICEADDED:
+		case SDL_CONTROLLERDEVICEREMOVED:
+		case SDL_JOYDEVICEADDED:
+		case SDL_JOYDEVICEREMOVED:
+			if (in_joystick && in_joystick->integer)
+			{
+				IN_InitJoystick();
+			}
+			break;
 		case SDL_QUIT:
 			Cbuf_ExecuteText(EXEC_NOW, "quit Closed window\n");
 			break;
@@ -860,6 +1054,10 @@ static void IN_ProcessEvents(void)
 					if (*c >= ' ' && *c < 127)
 						Com_QueueEvent(0, SE_CHAR, *c, 0, 0, NULL);
 				}
+			}
+			else if (in_charset && !Q_stricmp(in_charset->string, "cp1251") && IN_QueueCP1251(e.text.text))
+			{
+				// localised fonts use an 8 bit code page
 			}
 			else if (pendingChar)
 			{
@@ -935,6 +1133,7 @@ void IN_Init(void)
 
 	in_joystick          = Cvar_Get("in_joystick", "0", CVAR_ARCHIVE | CVAR_LATCH);
 	in_joystickDebug     = Cvar_Get("in_joystickDebug", "0", CVAR_TEMP);
+	in_charset           = Cvar_Get("in_charset", "", CVAR_ARCHIVE);   // "cp1251" for localised fonts
 	in_joystickThreshold = Cvar_Get("joy_threshold", "0.15", CVAR_ARCHIVE);
 
 	// printable characters for the console come through SDL_TEXTINPUT

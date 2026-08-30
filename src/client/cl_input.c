@@ -455,6 +455,16 @@ void CL_JoystickMove( usercmd_t *cmd ) {
 		anglespeed = 0.001 * cls.frametime;
 	}
 
+	if ( in_gamepadActive ) {
+		// game controller (sdl2_input.c): left stick moves, right stick looks
+		cmd->rightmove = ClampChar( cmd->rightmove + cl.joystickAxis[AXIS_SIDE] );
+		cmd->forwardmove = ClampChar( cmd->forwardmove + cl.joystickAxis[AXIS_FORWARD] );
+		cmd->upmove = ClampChar( cmd->upmove + cl.joystickAxis[AXIS_UP] );
+		cl.viewangles[YAW] -= anglespeed * cl_yawspeed->value * cl.joystickAxis[AXIS_YAW] / 1000.0f;
+		cl.viewangles[PITCH] += anglespeed * cl_pitchspeed->value * cl.joystickAxis[AXIS_PITCH] / 1000.0f;
+		return;
+	}
+
 #ifdef __MACOS__
 	cmd->rightmove = ClampChar( cmd->rightmove + cl.joystickAxis[AXIS_SIDE] );
 #else
