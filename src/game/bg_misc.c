@@ -84,7 +84,7 @@ extern vmCvar_t g_gametype;
 //
 //
 
-ammotable_t ammoTable[] = {
+ammotable_t ammoTable[WP_NUM_WEAPONS] = {
 	//	MAX				USES	MAX		RELOAD	FIRE			NEXT	HEAT,	COOL,	MOD,	...
 	//	AMMO			AMT.	CLIP	TIME	DELAY			SHOT
 	{   0,              0,      0,      0,      50,             0,      0,      0,      0                       },  //	WP_NONE					// 0

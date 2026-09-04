@@ -947,6 +947,8 @@ Called on a map_restart, but not on a normal map change
 ===================
 */
 void SV_RestartGameProgs( void ) {
+	int i;
+
 	if ( !gvm ) {
 		return;
 	}
@@ -956,6 +958,12 @@ void SV_RestartGameProgs( void ) {
 	gvm = VM_Restart( gvm );
 	if ( !gvm ) { // bk001212 - as done below
 		Com_Error( ERR_FATAL, "VM_Restart on game failed" );
+	}
+
+	// the entity pointers of the clients refer to the unloaded module image
+	// until SV_ClientEnterWorld sets them again
+	for ( i = 0; i < sv_maxclients->integer; i++ ) {
+		svs.clients[i].gentity = NULL;
 	}
 
 	SV_InitGameVM( qtrue );

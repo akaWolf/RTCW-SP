@@ -610,7 +610,7 @@ typedef struct ammotable_s {
 	int mod;                // means of death
 } ammotable_t;
 
-extern ammotable_t ammoTable[];     // defined in bg_misc.c
+extern ammotable_t ammoTable[WP_NUM_WEAPONS];     // defined in bg_misc.c
 extern int weapAlts[];  // defined in bg_misc.c
 
 
