@@ -56,7 +56,10 @@ int numblocks;
 
 typedef struct memoryblock_s
 {
-	unsigned long int id;
+	// the memory handed out follows the header: keep its size a multiple of
+	// 16 so that the memory is aligned for every type (token_t holds a long
+	// double and the compiler uses aligned SSE stores on it)
+	_Alignas( 16 ) unsigned long int id;
 	void *ptr;
 	int size;
 #ifdef MEMDEBUG
@@ -66,6 +69,8 @@ typedef struct memoryblock_s
 #endif //MEMDEBUG
 	struct memoryblock_s *prev, *next;
 } memoryblock_t;
+
+_Static_assert( sizeof( memoryblock_t ) % 16 == 0, "memoryblock_t must keep the allocations aligned" );
 
 memoryblock_t *memory;
 
@@ -323,6 +328,13 @@ void DumpMemory( void ) {
 
 #else
 
+// the memory id sits in front of the memory handed out: use 16 bytes for it
+// so that the memory is aligned for every type (token_t holds a long double
+// and the compiler uses aligned SSE stores on it)
+#define MEMORY_HEADER_SIZE 16
+
+_Static_assert( MEMORY_HEADER_SIZE >= sizeof( unsigned long int ), "the memory id must fit in the header" );
+
 //===========================================================================
 //
 // Parameter:			-
@@ -338,13 +350,13 @@ void *GetMemory( unsigned long size )
 	void *ptr;
 	unsigned long int *memid;
 
-	ptr = botimport.GetMemory( size + sizeof( unsigned long int ) );
+	ptr = botimport.GetMemory( size + MEMORY_HEADER_SIZE );
 	if ( !ptr ) {
 		return NULL;
 	}
 	memid = (unsigned long int *) ptr;
 	*memid = MEM_ID;
-	return (unsigned long int *) ( (char *) ptr + sizeof( unsigned long int ) );
+	return (unsigned long int *) ( (char *) ptr + MEMORY_HEADER_SIZE );
 } //end of the function GetMemory
 //===========================================================================
 //
@@ -382,13 +394,13 @@ void *GetHunkMemory( unsigned long size )
 	void *ptr;
 	unsigned long int *memid;
 
-	ptr = botimport.HunkAlloc( size + sizeof( unsigned long int ) );
+	ptr = botimport.HunkAlloc( size + MEMORY_HEADER_SIZE );
 	if ( !ptr ) {
 		return NULL;
 	}
 	memid = (unsigned long int *) ptr;
 	*memid = HUNK_ID;
-	return (unsigned long int *) ( (char *) ptr + sizeof( unsigned long int ) );
+	return (unsigned long int *) ( (char *) ptr + MEMORY_HEADER_SIZE );
 } //end of the function GetHunkMemory
 //===========================================================================
 //
@@ -420,7 +432,7 @@ return ptr;
 void FreeMemory( void *ptr ) {
 	unsigned long int *memid;
 
-	memid = (unsigned long int *) ( (char *) ptr - sizeof( unsigned long int ) );
+	memid = (unsigned long int *) ( (char *) ptr - MEMORY_HEADER_SIZE );
 
 	if ( *memid == MEM_ID ) {
 		botimport.FreeMemory( memid );
