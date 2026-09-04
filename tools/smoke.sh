@@ -21,7 +21,7 @@ run_case() {
 	local home=$OUT/$name log=$OUT/$name/main/rtcwconsole.log
 	mkdir -p "$home/main"
 	printf '%s\n' "$cfg" > "$home/main/smoke.cfg"
-	timeout 180 "$BUILD/wolf" +set fs_basepath "$BUILD" +set fs_cdpath "$DATA" +set fs_homepath "$home" \
+	timeout "${SMOKE_TIMEOUT:-180}" "$BUILD/wolf" +set fs_basepath "$BUILD" +set fs_cdpath "$DATA" +set fs_homepath "$home" \
 		+set r_fullscreen 0 +set r_mode -1 +set r_customwidth 1280 +set r_customheight 720 \
 		+set in_mouse 0 +set s_volume 0 +set s_musicvolume 0 +set logfile 2 +set developer 1 \
 		+set com_introplayed 1 "$@" +exec smoke.cfg > "$home/stdout" 2>&1

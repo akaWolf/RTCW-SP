@@ -110,6 +110,8 @@ Set them on the command line with `+set name value` or in the console.
 `tools/smoke.sh <build dir> <data dir>` starts the intro movie, the main
 menu and a level with a save/load cycle, takes screenshots and checks the
 log. It needs a display and the game data.
+`SMOKE_TIMEOUT` (seconds, 180 by default) bounds each case; sanitizer builds
+need more.
 
 ## License
 

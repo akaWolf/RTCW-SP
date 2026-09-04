@@ -272,13 +272,9 @@ Q_NORETURN void Sys_Exit( int ex ) {
 		sleep( 1 );
 	}
 
-#ifdef NDEBUG // regular behavior
-	exit(0);
-#else
-	// Give me a backtrace on error exits.
-	assert( ex == 0 );
+	// an error exit is not a bug of the exit path: no assert here, the
+	// caller already printed the reason
 	exit( ex );
-#endif
 }
 
 
